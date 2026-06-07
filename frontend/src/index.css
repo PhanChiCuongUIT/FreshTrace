@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #effdf4;
+  --color-brand-100: #d8fbe4;
+  --color-brand-500: #1aa65b;
+  --color-brand-600: #128548;
+  --color-brand-700: #106a3c;
+  --color-ink: #17231c;
+  --color-canvas: #f7f8f3;
+  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: #f7f8f3; color: #17231c; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+
+.card {
+  @apply rounded-2xl border border-black/5 bg-white shadow-[0_12px_35px_rgba(30,65,42,0.07)];
+}
+
+.input {
+  @apply w-full rounded-xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-brand-500 focus:ring-4 focus:ring-brand-100;
+}
+
+.btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 font-semibold text-white transition hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+.btn-secondary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-black/10 bg-white px-4 py-3 font-semibold transition hover:bg-black/5;
+}

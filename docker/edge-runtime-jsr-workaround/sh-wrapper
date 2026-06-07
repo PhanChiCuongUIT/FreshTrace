@@ -1,0 +1,7 @@
+#!/bin/sh
+if [ "$1" = "-c" ] && [ -n "$2" ]; then
+  command_text=$(printf '%s' "$2" | sed 's#jsr:@panva/jose@6#npm:jose@6.1.2#g')
+  exec /bin/sh -c "$command_text"
+fi
+
+exec /bin/sh "$@"

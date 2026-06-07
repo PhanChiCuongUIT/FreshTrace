@@ -1,0 +1,28 @@
+# Environment and credentials
+.env
+.env.*
+!.env.example
+!.env.production.example
+!supabase/.env.local.example
+!supabase-secrets.example.env
+!frontend/.env.example
+
+# Dependencies and builds
+node_modules/
+dist/
+build/
+
+# Supabase local state
+.supabase/
+supabase/.temp/
+supabase/.branches/
+
+# Local logs
+*.log
+.tmp-functions-*.log
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

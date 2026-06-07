@@ -1,0 +1,47 @@
+project_id = "freshtrace"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 54324
+
+[auth]
+enabled = true
+site_url = "http://localhost:5173"
+additional_redirect_urls = [
+  "http://localhost:5173/login",
+  "http://localhost:5173/auth/callback",
+  "http://localhost:5173/reset-password",
+  "http://127.0.0.1:5173/login",
+  "http://127.0.0.1:5173/reset-password",
+  "http://192.168.1.11:5173/login",
+  "http://192.168.1.11:5173/reset-password",
+]
+enable_signup = true
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+
+[functions.payos-webhook]
+verify_jwt = false
+
+[functions.trace-batch]
+verify_jwt = false

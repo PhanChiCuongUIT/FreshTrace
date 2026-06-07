@@ -1,0 +1,39 @@
+{
+  "name": "freshtrace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FreshTrace smart fresh-food marketplace",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "backend:start": "supabase start",
+    "backend:start:lite": "supabase start --exclude \"edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector\"",
+    "backend:stop": "supabase stop",
+    "backend:reset": "supabase db reset",
+    "backend:lint": "supabase db lint --local --level warning",
+    "backend:functions": "supabase functions serve --env-file supabase/.env.local",
+    "backend:runtime-fix": "powershell -ExecutionPolicy Bypass -File scripts/fix-edge-runtime-jsr.ps1",
+    "seed:demo": "powershell -ExecutionPolicy Bypass -File scripts/seed-demo.ps1",
+    "seed:cloudinary": "deno run --allow-read --allow-net scripts/migrate-demo-assets-to-cloudinary.ts",
+    "test:realtime": "powershell -ExecutionPolicy Bypass -File scripts/test-realtime.ps1",
+    "test:email": "powershell -ExecutionPolicy Bypass -File scripts/test-email-confirmation.ps1",
+    "test:backend": "powershell -ExecutionPolicy Bypass -File scripts/test-local-backend.ps1",
+    "frontend:dev": "npm --prefix frontend run dev",
+    "frontend:dev:lan": "npm --prefix frontend run dev -- --host 0.0.0.0",
+    "frontend:build": "npm --prefix frontend run build",
+    "frontend:lint": "npm --prefix frontend run lint",
+    "frontend:install": "npm --prefix frontend install",
+    "env:check": "powershell -ExecutionPolicy Bypass -File scripts/check-env.ps1",
+    "test:types": "deno check supabase/functions/admin-users/index.ts supabase/functions/assign-delivery/index.ts supabase/functions/cancel-order/index.ts supabase/functions/create-notification/index.ts supabase/functions/create-payos-payment/index.ts supabase/functions/fresh-assistant/index.ts supabase/functions/generate-batch-qr/index.ts supabase/functions/render-batch-qr/index.ts supabase/functions/payos-webhook/index.ts supabase/functions/record-delivery-payment/index.ts supabase/functions/sign-cloudinary-upload/index.ts supabase/functions/trace-batch/index.ts supabase/functions/update-delivery-status/index.ts supabase/functions/verify-delivery-batch/index.ts scripts/smoke-test.ts scripts/backend-integration-test.ts scripts/seed-demo-data.ts scripts/migrate-demo-assets-to-cloudinary.ts scripts/realtime-chat-test.ts"
+  },
+  "devDependencies": {
+    "@types/qrcode": "1.5.5",
+    "deno-bin": "2.2.7",
+    "supabase": "2.105.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.107.0",
+    "qrcode": "1.5.4"
+  }
+}
