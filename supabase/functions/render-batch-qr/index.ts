@@ -5,6 +5,12 @@ import { adminClient, requireProfile } from "../_shared/supabase.ts";
 
 type Body = { batchId?: string; batchCode?: string };
 
+function traceBaseUrl() {
+  return (Deno.env.get("QR_TRACE_BASE_URL") ??
+    Deno.env.get("SITE_URL") ??
+    "http://localhost:5173/trace").replace(/\/$/, "");
+}
+
 Deno.serve(async (request) => {
   const options = preflight(request);
   if (options) return options;
@@ -20,7 +26,7 @@ Deno.serve(async (request) => {
     const { data: batch, error } = await query.single();
     if (error || !batch) throw new HttpError(404, "Batch not found");
 
-    const traceUrl = `${Deno.env.get("QR_TRACE_BASE_URL")}/${batch.batch_id}`;
+    const traceUrl = `${traceBaseUrl()}/${batch.batch_id}`;
     const qrDataUrl = await QRCode.toDataURL(traceUrl, {
       errorCorrectionLevel: "M",
       width: 512,

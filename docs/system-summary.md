@@ -56,7 +56,7 @@ Backend/API: Supabase local stack, PostgREST, PostgreSQL RPC, Edge Functions in 
 
 Database: PostgreSQL with Supabase Auth/RLS/Realtime. Purpose: domain constraints, role-based access, transactional stock/order/payment changes, live chat/notifications/tracking.
 
-Media: Cloudinary. Purpose: product images, user avatars, chat attachments, delivery proof files.
+Media: Cloudinary. Purpose: product images, user avatars, and chat attachments.
 
 Payments: PayOS plus COD flow. Purpose: prepaid checkout, COD QR from shipper screen, shipper cash collection/remittance, webhook/payment state updates.
 
@@ -74,7 +74,7 @@ Customer:
 - Chat/Profile/Notifications: conversation, coupons/profile/avatar, realtime alerts.
 
 Employee/Shipper:
-- Deliveries: mobile-first delivery cards, status updates, batch camera/image QR verification, COD cash or PayOS QR settlement, delivery proof.
+- Deliveries: mobile-first delivery cards, status updates, batch camera/image QR verification, COD cash or PayOS QR settlement.
 - Chat/Profile/Notifications: customer/manager coordination and alerts.
 
 Manager:

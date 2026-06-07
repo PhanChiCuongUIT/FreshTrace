@@ -19,6 +19,7 @@
     "test:realtime": "powershell -ExecutionPolicy Bypass -File scripts/test-realtime.ps1",
     "test:email": "powershell -ExecutionPolicy Bypass -File scripts/test-email-confirmation.ps1",
     "test:backend": "powershell -ExecutionPolicy Bypass -File scripts/test-local-backend.ps1",
+    "test:shipper-deliveries": "node scripts/check-shipper-deliveries.cjs",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:dev:lan": "npm --prefix frontend run dev -- --host 0.0.0.0",
     "frontend:build": "npm --prefix frontend run build",

@@ -165,7 +165,7 @@ POST /functions/v1/verify-delivery-batch
 
 ```http
 POST /functions/v1/update-delivery-status
-{"deliveryId":"<uuid>","status":"delivered","proofImageUrl":"https://..."}
+{"deliveryId":"<uuid>","status":"delivered"}
 ```
 
 Valid flow: `assigned -> picked_up -> delivering -> delivered`. Every order batch

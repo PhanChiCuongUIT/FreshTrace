@@ -162,6 +162,15 @@ for (const status of ["picked_up", "delivering"] as const) {
   });
   if (error) throw error;
 }
+const shipperDeliveryQuery = await employee.client.from("deliveries")
+  .select("delivery_id,status,proof_image_url,delivery_batch_checks(batch_id,matched,checked_at),delivery_payment_collections(method,status,remittance_status),orders(order_id,order_code,delivery_address,users(name,phone),payments(method,status),order_items(order_item_id,product_name,quantity,batches(batch_id,batch_code)))")
+  .eq("delivery_id", deliveryId)
+  .single();
+if (shipperDeliveryQuery.error
+  || shipperDeliveryQuery.data.status !== "delivering"
+  || !shipperDeliveryQuery.data.orders) {
+  throw shipperDeliveryQuery.error ?? new Error("Shipper delivery page query failed while delivery is delivering");
+}
 const { error: collectionError } = await employee.client.rpc("record_delivery_collection", {
   p_delivery_id: deliveryId,
   p_method: "cash",
@@ -173,7 +182,7 @@ await expectFailure("cash delivery requires payOS remittance", () =>
     p_delivery_id: deliveryId,
     p_status: "delivered",
     p_note: "Must fail before cash remittance",
-    p_proof_image_url: "https://example.com/proof.jpg",
+    p_proof_image_url: null,
   }));
 const { error: remittanceError } = await admin.from("delivery_payment_collections")
   .update({ remittance_status: "paid", remitted_at: new Date().toISOString() })
@@ -182,8 +191,8 @@ if (remittanceError) throw remittanceError;
 const { error: deliveredError } = await employee.client.rpc("update_delivery_status", {
   p_delivery_id: deliveryId,
   p_status: "delivered",
-  p_note: "Delivered in integration test",
-  p_proof_image_url: "https://example.com/proof.jpg",
+  p_note: "Delivered in integration test without proof upload",
+  p_proof_image_url: null,
 });
 if (deliveredError) throw deliveredError;
 

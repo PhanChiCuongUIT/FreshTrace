@@ -258,7 +258,7 @@ async function createCompletedOrder(
     p_delivery_id: deliveryId,
     p_status: "delivered",
     p_note: "Demo order delivered successfully",
-    p_proof_image_url: "https://res.cloudinary.com/demo/image/upload/freshtrace-demo-proof.jpg",
+    p_proof_image_url: null,
   });
   if (delivered.error) throw delivered.error;
   return orderId;
