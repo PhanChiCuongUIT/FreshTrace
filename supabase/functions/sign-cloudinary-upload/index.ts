@@ -25,13 +25,23 @@ Deno.serve(async (request) => {
     };
     if (!permissions[folder]?.includes(profile.role)) throw new HttpError(403, "Folder is not allowed");
 
+    const cloudName = Deno.env.get("CLOUDINARY_CLOUD_NAME")?.trim();
+    const apiKey = Deno.env.get("CLOUDINARY_API_KEY")?.trim();
+    const apiSecret = Deno.env.get("CLOUDINARY_API_SECRET")?.trim();
+    if (
+      !cloudName || !apiKey || !apiSecret ||
+      cloudName.startsWith("your_") || apiKey.startsWith("your_") || apiSecret.startsWith("your_")
+    ) {
+      throw new HttpError(500, "Cloudinary is not configured. Check CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in supabase/.env.local, then restart backend:functions.");
+    }
+
     const timestamp = Math.floor(Date.now() / 1000);
     const cloudFolder = `freshtrace/${folder}`;
     const params = `folder=${cloudFolder}&timestamp=${timestamp}`;
-    const signature = await sha1(params + Deno.env.get("CLOUDINARY_API_SECRET")!);
+    const signature = await sha1(params + apiSecret);
     return json(request, {
-      cloudName: Deno.env.get("CLOUDINARY_CLOUD_NAME"),
-      apiKey: Deno.env.get("CLOUDINARY_API_KEY"),
+      cloudName,
+      apiKey,
       folder: cloudFolder,
       timestamp,
       signature,

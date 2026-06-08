@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.107.0";
 
-const baseUrl = Deno.args[0] ?? "http://127.0.0.1:54321";
+const baseUrl = Deno.args[0] ?? "http://127.0.0.1:55421";
 const publishableKey = Deno.args[1];
 if (!publishableKey) {
   throw new Error("Usage: deno run --allow-net realtime-chat-test.ts <url> <publishable-key>");

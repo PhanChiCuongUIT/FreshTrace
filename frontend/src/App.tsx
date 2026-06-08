@@ -8,10 +8,12 @@ import { LoadingState } from './components/AsyncState'
 const LoginPage = lazy(() => import('./features/auth/LoginPage').then(module => ({ default: module.LoginPage })))
 const RegisterPage = lazy(() => import('./features/auth/RegisterPage').then(module => ({ default: module.RegisterPage })))
 const ResetPasswordPage = lazy(() => import('./features/auth/ResetPasswordPage').then(module => ({ default: module.ResetPasswordPage })))
+const AuthConfirmPage = lazy(() => import('./features/auth/AuthConfirmPage').then(module => ({ default: module.AuthConfirmPage })))
 const ProductsPage = lazy(() => import('./features/customer/ProductsPage').then(module => ({ default: module.ProductsPage })))
 const ProductDetailPage = lazy(() => import('./features/customer/ProductDetailPage').then(module => ({ default: module.ProductDetailPage })))
 const CartPage = lazy(() => import('./features/customer/CartPage').then(module => ({ default: module.CartPage })))
 const OrdersPage = lazy(() => import('./features/customer/OrdersPage').then(module => ({ default: module.OrdersPage })))
+const ReportsPage = lazy(() => import('./features/customer/ReportsPage').then(module => ({ default: module.ReportsPage })))
 const TracePage = lazy(() => import('./features/customer/TracePage').then(module => ({ default: module.TracePage })))
 const AssistantPage = lazy(() => import('./features/customer/AssistantPage').then(module => ({ default: module.AssistantPage })))
 const PaymentResultPage = lazy(() => import('./features/customer/PaymentResultPage').then(module => ({ default: module.PaymentResultPage })))
@@ -35,6 +37,7 @@ export default function App() {
     <Route path="/login" element={<LoginPage />} />
     <Route path="/register" element={<RegisterPage />} />
     <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <Route path="/auth/confirm" element={<AuthConfirmPage />} />
     <Route element={<ProtectedRoute />}>
       <Route element={<AppShell />}>
         <Route path="/" element={<RoleHome />} />
@@ -44,7 +47,8 @@ export default function App() {
         <Route path="/cart" element={<CartPage />} />
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/:orderId" element={<OrdersPage />} />
-        <Route path="/reports/:reportId" element={<OrdersPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/reports/:reportId" element={<ReportsPage />} />
         <Route path="/trace" element={<TracePage />} />
         <Route path="/trace/:batchId" element={<TracePage />} />
         <Route path="/assistant" element={<AssistantPage />} />

@@ -169,9 +169,9 @@ POST /functions/v1/update-delivery-status
 ```
 
 Valid flow: `assigned -> picked_up -> delivering -> delivered`. Every order batch
-must be verified before pickup. Delivery proof is required for `delivered`. COD
-orders must also have a recorded collection before completion. A cash collection
-must have `remittance_status = paid` before the delivery can be completed.
+must be verified before pickup. COD orders must also have a confirmed Customer
+payOS payment or a recorded cash collection whose `remittance_status = paid`
+before the delivery can be completed.
 
 ## Payments
 

@@ -75,6 +75,11 @@ Start Edge Functions in another terminal:
 npm run backend:functions
 ```
 
+Keep this terminal running when testing Cloudinary upload, payOS, QR rendering,
+delivery APIs, cancellation, notifications and Fresh Assistant. `backend:start`
+intentionally does not start the embedded Edge Runtime, because that runtime does
+not load `supabase/.env.local` secrets on this Windows local setup.
+
 With Edge Functions running, migrate demo product images, avatars, and a chat
 attachment into the configured Cloudinary account:
 
@@ -129,10 +134,13 @@ browser bundle and must be treated as public.
 The frontend needs only these browser-safe values:
 
 ```env
-VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_URL=http://127.0.0.1:55421
 VITE_SUPABASE_ANON_KEY=your_local_publishable_key
-VITE_API_BASE_URL=http://127.0.0.1:54321/functions/v1
+VITE_API_BASE_URL=http://127.0.0.1:55421/functions/v1
 VITE_QR_TRACE_BASE_URL=http://localhost:5173/trace
+VITE_SITE_URL=http://localhost:5173
+VITE_AUTH_REDIRECT_URL=http://localhost:5173/login
+VITE_PASSWORD_RESET_REDIRECT_URL=http://localhost:5173/reset-password
 ```
 
 payOS secret keys, Cloudinary API secrets, service-role keys, and AI provider keys
@@ -147,7 +155,36 @@ CLOUDINARY_API_SECRET=
 PAYOS_CLIENT_ID=
 PAYOS_API_KEY=
 PAYOS_CHECKSUM_KEY=
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=your_gmail_address@gmail.com
+SMTP_PASS=your_gmail_app_password
+SMTP_ADMIN_EMAIL=your_gmail_address@gmail.com
+SMTP_SENDER_NAME=FreshTrace
 ```
+
+Supabase Auth sends signup confirmation and password reset emails through real
+SMTP. For Gmail, enable 2-Step Verification, create an App Password, remove spaces
+from that app password, put it in `SMTP_PASS`, then restart the backend:
+
+```powershell
+npm run backend:stop
+npm run backend:start
+```
+
+Test real email delivery with:
+
+```powershell
+npm run test:email -- -Email youraddress@gmail.com
+```
+
+The email templates live in `supabase/templates`. The FreshTrace logo is uploaded
+to Cloudinary with `npm run seed:email-logo` so Gmail can load it from a public
+HTTPS URL instead of a local LAN address.
+
+Local Auth email rate limiting is raised in `supabase/config.toml` for development
+(`auth.rate_limit.email_sent = 60`, `auth.email.max_frequency = "5s"`). If you use
+a hosted Supabase project, set the equivalent Auth rate limit in the Supabase
+Dashboard/API.
 
 For a low-memory backend:
 
@@ -234,9 +271,12 @@ address with `ipconfig`, then replace `192.168.1.20` below with that address:
 
 ```env
 # frontend/.env.local
-VITE_SUPABASE_URL=http://192.168.1.20:54321
-VITE_API_BASE_URL=http://192.168.1.20:54321/functions/v1
+VITE_SUPABASE_URL=http://192.168.1.20:55421
+VITE_API_BASE_URL=http://192.168.1.20:55421/functions/v1
 VITE_QR_TRACE_BASE_URL=http://192.168.1.20:5173/trace
+VITE_SITE_URL=http://192.168.1.20:5173
+VITE_AUTH_REDIRECT_URL=http://192.168.1.20:5173/login
+VITE_PASSWORD_RESET_REDIRECT_URL=http://192.168.1.20:5173/reset-password
 ```
 
 Also add the LAN frontend origin to `ALLOWED_ORIGINS` in `supabase/.env.local`:
@@ -252,7 +292,9 @@ npm run frontend:dev:lan
 ```
 
 Open `http://192.168.1.20:5173` on the phone. Allow inbound TCP ports `5173` and
-`54321` in Windows Firewall if the page or API cannot be reached.
+`55421` in Windows Firewall if the page or API cannot be reached. Confirmation and
+password reset links are sent to the real recipient inbox through SMTP, so use an
+email account you can open on the phone.
 
 Plain LAN HTTP is enough for responsive layout, authentication, catalog, cart,
 orders, chat, and role screens. Mobile browsers require HTTPS for camera QR

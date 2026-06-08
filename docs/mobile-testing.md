@@ -33,9 +33,9 @@ Do not use `127.0.0.1`. On a phone, `127.0.0.1` means the phone itself.
 Update `frontend/.env.local`:
 
 ```env
-VITE_SUPABASE_URL=http://192.168.1.11:54321
+VITE_SUPABASE_URL=http://192.168.1.11:55421
 VITE_SUPABASE_ANON_KEY=YOUR_LOCAL_PUBLISHABLE_KEY
-VITE_API_BASE_URL=http://192.168.1.11:54321/functions/v1
+VITE_API_BASE_URL=http://192.168.1.11:55421/functions/v1
 VITE_QR_TRACE_BASE_URL=http://192.168.1.11:5173/trace
 ```
 
@@ -43,9 +43,9 @@ Also update the LAN entries in `supabase/config.toml` under
 `auth.additional_redirect_urls`, then restart Supabase. This allows confirmation
 and password-recovery links opened on the phone to return to the LAN frontend.
 
-In local development, Supabase captures confirmation and password-reset email in
-the local inbox at `http://127.0.0.1:54324`; it does not send to a real mailbox
-unless SMTP is configured for the deployed Supabase project.
+FreshTrace local development sends confirmation and password-reset email through
+real SMTP. For Gmail, configure a Gmail App Password in `supabase/.env.local`, then
+restart Supabase.
 
 Get the local publishable key with:
 
@@ -69,7 +69,7 @@ Run PowerShell as Administrator:
 
 ```powershell
 New-NetFirewallRule -DisplayName "FreshTrace Frontend" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5173
-New-NetFirewallRule -DisplayName "FreshTrace Supabase" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 54321
+New-NetFirewallRule -DisplayName "FreshTrace Supabase" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 55421
 ```
 
 Only add these rules on a trusted private network.
@@ -123,9 +123,9 @@ FreshTrace!123
 Work through these checks in order:
 
 1. On the computer, open `http://192.168.1.11:5173`.
-2. On the phone, open `http://192.168.1.11:54321/auth/v1/health`. A JSON health
+2. On the phone, open `http://192.168.1.11:55421/auth/v1/health`. A JSON health
    response proves the phone can reach Supabase.
-3. If step 1 works but step 2 fails, allow inbound port `54321` in Windows Firewall
+3. If step 1 works but step 2 fails, allow inbound port `55421` in Windows Firewall
    and confirm Docker Desktop is running.
 4. If both fail on the phone, set the Windows network profile to **Private**, keep
    both devices on the same Wi-Fi, and disable VPN, mobile data, Private Relay, or
@@ -207,14 +207,26 @@ Cloudinary uploads, and public payOS callbacks without local-network limitations
 
 ## Email Confirmation and Password Recovery
 
-Local Supabase delivers registration confirmation and password recovery messages to
-Mailpit:
+Local Supabase delivers registration confirmation and password recovery messages
+through the SMTP provider configured in `supabase/.env.local`.
 
-```text
-http://127.0.0.1:54324
+For Gmail:
+
+```env
+SMTP_HOST=smtp.gmail.com
+SMTP_USER=your_gmail_address@gmail.com
+SMTP_PASS=your_16_character_gmail_app_password
+SMTP_ADMIN_EMAIL=your_gmail_address@gmail.com
+SMTP_SENDER_NAME=FreshTrace
 ```
 
-Open Mailpit on the computer, open the latest message, and follow its link. For a
-physical phone to open local email links, the redirect URL must use the computer's
-LAN IP and that URL must be listed in Supabase Auth redirect URLs. For production,
-configure an SMTP provider and use the deployed HTTPS frontend URL.
+Remove spaces from the Gmail App Password before saving `SMTP_PASS`. Local Auth
+email rate limiting is raised in `supabase/config.toml` for development; hosted
+Supabase projects need the equivalent Auth rate limit set in the Dashboard/API.
+The email buttons open `/auth/confirm` on the frontend first, then the frontend
+verifies the token, which avoids Gmail on a phone opening a localhost-only Supabase
+verification URL.
+
+Open the real recipient inbox, then follow the confirmation or password-reset
+link. For a physical phone to open local email links, the redirect URL must use the
+computer's LAN IP and that URL must be listed in Supabase Auth redirect URLs.

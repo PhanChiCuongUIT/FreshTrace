@@ -2,16 +2,19 @@ import { useState } from 'react'
 import { Camera, UserRound } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { PageHeader, Badge } from '../../components/Page'
+import { authRedirect } from '../../lib/authRedirects'
 import { currency, dateTime } from '../../lib/format'
 import { supabase } from '../../lib/supabase'
 import { uploadImage } from '../../lib/cloudinary'
 import { useAuth } from '../auth/auth-context'
+import { useFeedback } from '../../components/Feedback'
 
 type Payment = { payment_id: string; method: string; status: string; amount: number; created_at: string; orders: { order_code: number } }
 type Coupon = { coupon_id: string; code: string; coupon_type: string; amount: number; remaining_amount: number; status: string; expires_at: string | null; created_at: string; description: string | null }
 
 export function ProfilePage() {
   const { profile, role, refreshProfile } = useAuth()
+  const feedback = useFeedback()
   const [name, setName] = useState(profile?.name ?? '')
   const [phone, setPhone] = useState(profile?.phone ?? '')
   const [address, setAddress] = useState(profile?.address ?? '')
@@ -32,26 +35,24 @@ export function ProfilePage() {
     setSaving(true)
     const result = await supabase.from('users').update({ name, phone: phone || null, address: address || null, avatar_url: avatarUrl || null }).eq('user_id', profile!.user_id)
     setSaving(false)
-    if (result.error) alert(result.error.message)
-    else { await refreshProfile(); alert('Profile updated') }
+    if (result.error) feedback.error(result.error.message)
+    else { await refreshProfile(); feedback.success('Profile updated') }
   }
   const uploadAvatar = async (file?: File) => {
     if (!file) return
-    if (!file.type.startsWith('image/')) return alert('Avatar must be an image')
+    if (!file.type.startsWith('image/')) return feedback.error('Avatar must be an image')
     setUploadingAvatar(true)
     try {
       const url = await uploadImage(file, 'avatars')
       setAvatarUrl(url)
-      const result = await supabase.from('users').update({ avatar_url: url }).eq('user_id', profile!.user_id)
-      if (result.error) throw result.error
-      await refreshProfile()
-    } catch (error) { alert(String(error)) } finally { setUploadingAvatar(false) }
+      feedback.info('Avatar uploaded. Click Save profile to apply the new avatar.')
+    } catch (error) { feedback.error(String(error)) } finally { setUploadingAvatar(false) }
   }
   const sendPasswordReset = async () => {
     if (!profile?.email) return
-    const result = await supabase.auth.resetPasswordForEmail(profile.email, { redirectTo: `${window.location.origin}/reset-password` })
-    if (result.error) alert(result.error.message)
-    else alert(import.meta.env.DEV ? 'Password reset email sent. Open the local email inbox at http://127.0.0.1:54324.' : 'Password reset email sent. Check your email inbox.')
+    const result = await supabase.auth.resetPasswordForEmail(profile.email, { redirectTo: authRedirect('/reset-password') })
+    if (result.error) feedback.error(result.error.message)
+    else feedback.success('Password reset email sent. Check your email inbox.')
   }
   return <div><PageHeader eyebrow="Account" title="Profile and settings" />
     <div className="mt-6 grid gap-5 xl:grid-cols-2"><form className="card space-y-4 p-5 sm:p-6" onSubmit={event => { event.preventDefault(); save() }}><h2 className="text-xl font-black">Personal information</h2>

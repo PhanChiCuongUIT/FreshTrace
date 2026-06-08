@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Confirm your FreshTrace account</title>
+  </head>
+  <body style="margin:0;background:#f4f7ef;font-family:Arial,Helvetica,sans-serif;color:#172015;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7ef;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;overflow:hidden;border-radius:28px;background:#ffffff;box-shadow:0 18px 48px rgba(23,32,21,.12);">
+            <tr>
+              <td style="background:linear-gradient(135deg,#0f7a4f,#75c56e);padding:30px;text-align:center;color:#ffffff;">
+                <img src="https://res.cloudinary.com/dbltlcpkc/image/upload/v1780920367/freshtrace/email/logo-freshtrace.png" width="88" height="88" alt="FreshTrace" style="display:block;margin:0 auto 14px;border-radius:22px;background:#ffffff;object-fit:contain;">
+                <h1 style="margin:0;font-size:28px;line-height:1.15;">Welcome to FreshTrace</h1>
+                <p style="margin:10px 0 0;font-size:15px;opacity:.92;">Smart clean-food marketplace with trusted traceability.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                <p style="margin:0 0 14px;font-size:16px;">Hi {{ .Data.name }},</p>
+                <p style="margin:0 0 22px;font-size:16px;line-height:1.6;color:#455141;">Please confirm <strong>{{ .Email }}</strong> to activate your FreshTrace account. After confirmation, you can browse clean food, trace batches by QR, use Fresh Rescue deals, and track orders.</p>
+                <p style="margin:28px 0;text-align:center;">
+                  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next={{ .RedirectTo }}" style="display:inline-block;border-radius:999px;background:#138a59;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:14px 28px;">Confirm my account</a>
+                </p>
+                <p style="margin:0 0 8px;font-size:13px;line-height:1.5;color:#687364;">If the button does not work, copy and paste this link into your browser:</p>
+                <p style="margin:0;word-break:break-all;font-size:12px;line-height:1.5;color:#138a59;">{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=email&next={{ .RedirectTo }}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="border-top:1px solid #edf0e8;padding:20px 32px;text-align:center;font-size:12px;color:#7a8475;">
+                FreshTrace keeps clean-food orders transparent from supplier to delivery.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

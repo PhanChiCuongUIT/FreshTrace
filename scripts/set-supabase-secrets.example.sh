@@ -7,7 +7,7 @@
 supabase secrets set \
   APP_ENV="development" \
   APP_URL="http://localhost:5173" \
-  API_BASE_URL="http://localhost:54321/functions/v1" \
+  API_BASE_URL="http://localhost:55421/functions/v1" \
   ALLOWED_ORIGINS="http://localhost:5173,https://your-domain.com" \
   CLOUDINARY_CLOUD_NAME="your_cloudinary_cloud_name" \
   CLOUDINARY_API_KEY="your_cloudinary_api_key" \
@@ -18,7 +18,7 @@ supabase secrets set \
   PAYOS_CHECKSUM_KEY="your_payos_checksum_key" \
   PAYOS_RETURN_URL="http://localhost:5173/payment/success" \
   PAYOS_CANCEL_URL="http://localhost:5173/payment/cancel" \
-  PAYOS_WEBHOOK_URL="http://localhost:54321/functions/v1/payos-webhook" \
+  PAYOS_WEBHOOK_URL="http://localhost:55421/functions/v1/payos-webhook" \
   USE_AI_ASSISTANT="false" \
   AI_PROVIDER="rule-based" \
   GEMINI_API_KEY="your_gemini_api_key" \

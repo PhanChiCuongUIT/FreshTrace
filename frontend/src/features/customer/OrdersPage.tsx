@@ -48,7 +48,7 @@ export function OrdersPage() {
   }
   const review = async (order: Order, productId: string) => {
     const rating = Number(prompt('Rating from 1 to 5', '5'))
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) return alert('Rating must be from 1 to 5')
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) return toast('Rating must be from 1 to 5', 'error')
     const comment = prompt('Review comment') ?? null
     const result = await supabase.from('reviews').upsert({ user_id: profile!.user_id, order_id: order.order_id, product_id: productId, rating, comment }, { onConflict: 'user_id,product_id,order_id' })
     if (result.error) toast(result.error.message, 'error')

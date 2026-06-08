@@ -6,11 +6,13 @@ import { callFunction } from '../../lib/api'
 import { supabase } from '../../lib/supabase'
 import type { Role } from '../../lib/types'
 import { Search, TriangleAlert } from 'lucide-react'
+import { useFeedback } from '../../components/Feedback'
 
 type User = { user_id: string; name: string; email: string; status: 'active' | 'inactive' | 'banned'; roles: { role_name: Role } }
 
 export function AdminUsersPage() {
   const client = useQueryClient()
+  const feedback = useFeedback()
   const [form, setForm] = useState({ name: '', email: '', password: '', role: 'employee' as Role })
   const [query, setQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('')
@@ -21,13 +23,46 @@ export function AdminUsersPage() {
     return result.data as unknown as User[]
   }})
   const create = async () => {
-    try { await callFunction('admin-users', { action: 'create', ...form }); setForm({ name: '', email: '', password: '', role: 'employee' }); client.invalidateQueries({ queryKey: ['admin-users'] }) } catch (error) { alert(String(error)) }
+    try { await callFunction('admin-users', { action: 'create', ...form }); setForm({ name: '', email: '', password: '', role: 'employee' }); client.invalidateQueries({ queryKey: ['admin-users'] }); feedback.success('User account created') } catch (error) { feedback.error(String(error)) }
   }
   const update = async (userId: string, values: { role?: Role; status?: User['status'] }) => {
     const user = users.data?.find(item => item.user_id === userId)
     const change = values.role ? `change ${user?.name}'s role from ${user?.roles.role_name} to ${values.role}` : `change ${user?.name}'s status to ${values.status}`
-    if (!confirm(`Warning: ${change}. Active orders or deliveries will block unsafe changes. Continue?`)) return
-    try { await callFunction('admin-users', { action: 'update', userId, ...values }); client.invalidateQueries({ queryKey: ['admin-users'] }) } catch (error) { alert(String(error)) }
+    if (user?.status === 'banned' && values.status && values.status !== 'banned') {
+      feedback.error('Banned accounts cannot be restored to active or inactive status')
+      return
+    }
+    let reason: string | undefined
+    if (values.status === 'inactive' || values.status === 'banned') {
+      const label = values.status === 'banned' ? 'Ban user' : 'Set inactive'
+      const entered = await feedback.prompt({
+        title: `${label}?`,
+        description: `Please enter a reason. FreshTrace will email ${user?.email ?? 'this user'} with the reason after the change is applied.`,
+        placeholder: 'Explain the governance reason clearly...',
+        confirmLabel: label,
+        danger: values.status === 'banned',
+        required: true,
+      })
+      if (!entered) return
+      reason = entered
+    } else if (!await feedback.confirm({ title: 'Apply user governance change?', description: `Warning: ${change}. Active orders or deliveries will block unsafe changes.`, confirmLabel: 'Apply change', danger: Boolean(values.role === 'admin') })) return
+    try { await callFunction('admin-users', { action: 'update', userId, ...values, reason }); client.invalidateQueries({ queryKey: ['admin-users'] }); feedback.success(values.status === 'inactive' || values.status === 'banned' ? 'User status updated and email notification sent' : 'User account updated') } catch (error) { feedback.error(String(error)) }
+  }
+  const deleteUser = async (user: User) => {
+    const approved = await feedback.confirm({
+      title: `Delete banned user ${user.name}?`,
+      description: 'Only banned accounts can be deleted. This removes the authentication account and profile when database references allow it.',
+      confirmLabel: 'Delete user',
+      danger: true,
+    })
+    if (!approved) return
+    try {
+      await callFunction('admin-users', { action: 'delete', userId: user.user_id })
+      client.invalidateQueries({ queryKey: ['admin-users'] })
+      feedback.success('Banned user deleted')
+    } catch (error) {
+      feedback.error(String(error))
+    }
   }
   if (users.isLoading) return <LoadingState />
   if (users.error) return <ErrorState error={users.error} />
@@ -39,6 +74,6 @@ export function AdminUsersPage() {
   return <div><PageHeader eyebrow="Identity" title="User administration" />
     <form className="card mt-6 grid gap-3 p-5 md:grid-cols-5" onSubmit={event => { event.preventDefault(); create() }}><input className="input" required placeholder="Full name" value={form.name} onChange={event => setForm({ ...form, name: event.target.value })}/><input className="input" required type="email" placeholder="Email" value={form.email} onChange={event => setForm({ ...form, email: event.target.value })}/><input className="input" required minLength={8} type="password" placeholder="Password" value={form.password} onChange={event => setForm({ ...form, password: event.target.value })}/><select className="input" value={form.role} onChange={event => setForm({ ...form, role: event.target.value as Role })}><option value="employee">Employee</option><option value="manager">Manager</option><option value="admin">Admin</option><option value="customer">Customer</option></select><button className="btn-primary">Create account</button></form>
     <div className="card mt-5 p-4"><div className="flex items-center gap-2 text-sm text-amber-800"><TriangleAlert size={17}/><span>Role changes are audited by workflow rules. Users with open orders or active deliveries cannot be reassigned.</span></div><div className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_180px]"><label className="relative"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-black/35" size={18}/><input className="input" style={{ paddingLeft: '2.75rem' }} value={query} onChange={event => setQuery(event.target.value)} placeholder="Search name or email"/></label><select className="input" value={roleFilter} onChange={event => setRoleFilter(event.target.value)}><option value="">All roles</option>{['customer','employee','manager','admin'].map(role => <option key={role}>{role}</option>)}</select><select className="input" value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="">All statuses</option><option>active</option><option>inactive</option><option>banned</option></select></div></div>
-    <div className="card mt-5 overflow-x-auto"><table className="min-w-[760px] w-full text-left text-sm"><thead className="border-b"><tr><th className="p-4">User</th><th>Role</th><th>Status</th><th>Controls</th></tr></thead><tbody>{filtered?.map(user => <tr key={user.user_id} className="border-b last:border-0"><td className="p-4"><b className="block">{user.name}</b><span className="text-black/50">{user.email}</span></td><td><select className="input max-w-36 py-2" value={user.roles.role_name} onChange={event => update(user.user_id, { role: event.target.value as Role })}>{['customer','employee','manager','admin'].map(role => <option key={role}>{role}</option>)}</select></td><td><Badge tone={user.status === 'active' ? 'green' : user.status === 'banned' ? 'red' : 'orange'}>{user.status}</Badge></td><td><select className="input max-w-36 py-2" value={user.status} onChange={event => update(user.user_id, { status: event.target.value as User['status'] })}><option value="active">active</option><option value="inactive">inactive</option><option value="banned">banned</option></select></td></tr>)}</tbody></table></div>
+    <div className="card mt-5 overflow-x-auto"><table className="min-w-[760px] w-full text-left text-sm"><thead className="border-b"><tr><th className="p-4">User</th><th>Role</th><th>Status</th><th>Controls</th></tr></thead><tbody>{filtered?.map(user => <tr key={user.user_id} className="border-b last:border-0"><td className="p-4"><b className="block">{user.name}</b><span className="text-black/50">{user.email}</span></td><td><select className="input max-w-36 py-2" value={user.roles.role_name} onChange={event => update(user.user_id, { role: event.target.value as Role })}>{['customer','employee','manager','admin'].map(role => <option key={role}>{role}</option>)}</select></td><td><Badge tone={user.status === 'active' ? 'green' : user.status === 'banned' ? 'red' : 'orange'}>{user.status}</Badge></td><td><div className="flex flex-wrap gap-2"><select className="input max-w-36 py-2" value={user.status} disabled={user.status === 'banned'} onChange={event => update(user.user_id, { status: event.target.value as User['status'] })}><option value="active">active</option><option value="inactive">inactive</option><option value="banned">banned</option></select>{user.status === 'banned' && <button className="rounded-xl bg-red-600 px-3 py-2 text-sm font-bold text-white hover:bg-red-700" onClick={() => deleteUser(user)}>Delete</button>}</div></td></tr>)}</tbody></table></div>
   </div>
 }

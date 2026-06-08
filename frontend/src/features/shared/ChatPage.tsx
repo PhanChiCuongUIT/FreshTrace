@@ -8,6 +8,7 @@ import { uploadChatFile } from '../../lib/cloudinary'
 import { dateTime } from '../../lib/format'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/auth-context'
+import { useFeedback } from '../../components/Feedback'
 
 type Room = { room_id: string; room_type: string; order_id: string | null; order_code: number | null; peer_user_id: string; peer_name: string; peer_avatar_url: string | null; peer_email: string; peer_phone: string | null; peer_role: string; created_at: string }
 type Reaction = { reaction_id: string; reaction: ReactionName; user_id: string }
@@ -30,6 +31,7 @@ function fileSize(value: number | null) {
 
 export function ChatPage() {
   const { profile } = useAuth()
+  const feedback = useFeedback()
   const { roomId: routeRoomId } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -101,15 +103,15 @@ export function ChatPage() {
   }, [client, contacts.data, contacts.isLoading, rooms.data, rooms.isLoading, shareOrder, shareProduct])
   const createRoom = async () => {
     const contact = contacts.data?.find(item => `${item.user_id}:${item.room_type}:${item.order_id ?? ''}` === contactKey)
-    if (!contact) return alert('Select a valid contact')
+    if (!contact) return feedback.error('Select a valid contact')
     const result = await supabase.rpc('create_chat_room', { p_type: contact.room_type, p_other_user_id: contact.user_id, p_order_id: contact.order_id, p_product_id: null })
-    if (result.error) return alert(result.error.message)
+    if (result.error) return feedback.error(result.error.message)
     setRoomId(result.data as string)
     client.invalidateQueries({ queryKey: ['chat-rooms'] })
   }
   const send = async () => {
     if (!message.trim() && !attachment && !shareProduct && !shareOrder) return
-    if (attachment && attachment.size > 10 * 1024 * 1024) return alert('Attachments must be 10 MB or smaller')
+    if (attachment && attachment.size > 10 * 1024 * 1024) return feedback.error('Attachments must be 10 MB or smaller')
     setSending(true)
     try {
       const attachmentUrl = attachment ? await uploadChatFile(attachment) : null
@@ -130,7 +132,7 @@ export function ChatPage() {
       if (shareProduct || shareOrder) navigate(roomId ? `/chat/${roomId}` : '/chat', { replace: true })
       client.invalidateQueries({ queryKey: ['chat-messages', roomId] })
     } catch (error) {
-      alert(String(error))
+      feedback.error(String(error))
     } finally {
       setSending(false)
     }
@@ -140,7 +142,7 @@ export function ChatPage() {
     const result = existing?.reaction === reaction
       ? await supabase.from('chat_message_reactions').delete().eq('reaction_id', existing.reaction_id)
       : await supabase.from('chat_message_reactions').upsert({ message_id: item.message_id, user_id: profile!.user_id, reaction }, { onConflict: 'message_id,user_id' })
-    if (result.error) alert(result.error.message)
+    if (result.error) feedback.error(result.error.message)
     else { setReactionFor(''); client.invalidateQueries({ queryKey: ['chat-messages', roomId] }) }
   }
   if (rooms.isLoading) return <LoadingState />

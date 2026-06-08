@@ -22,7 +22,7 @@ implementation on June 7, 2026.
 | UC13 | Manager | Operations filters available Shippers and confirms assignment | `assign-delivery` validates role, order state and active assignment | `deliveries`, `orders`, `users` |
 | UC14 | Shipper | Mobile delivery cards show only assigned jobs | Delivery RLS limits Employee access to their assignments | `deliveries`, `orders`, `users` |
 | UC15 | Shipper | Mobile camera, chosen QR image, captured QR image, or the in-order QR modal verifies each delivery batch; verified batches are marked immediately | `verify-delivery-batch` checks assignment and required order batches | `delivery_batch_checks`, `order_items`, `batches` |
-| UC16 | Shipper | Mobile actions update pickup, delivering, delivered or failed with confirmation | `update-delivery-status` enforces transition, QR, proof and payment gates | `deliveries`, `orders`, `order_tracking`, `notifications` |
+| UC16 | Shipper | Mobile actions update pickup, delivering, delivered or failed with confirmation | `update-delivery-status` enforces transition, QR verification and payment/remittance gates | `deliveries`, `orders`, `order_tracking`, `notifications` |
 | UC17 | Customer, Shipper | Order-linked chat with grouped avatars, files, shares and reactions | Room RPC verifies Customer/Shipper assignment; Realtime broadcasts updates | `chat_rooms`, `chat_room_members`, `chat_messages`, `chat_message_reactions` |
 | UC18 | Customer, Manager | General, product or owned-order Manager chat | Room RPC verifies roles, product availability and order ownership | Same chat tables plus `orders`, `products` |
 | UC19 | Manager, Shipper | Order-linked operational chat | Room RPC requires the Shipper assignment | Same chat tables plus `deliveries` |

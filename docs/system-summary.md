@@ -18,7 +18,7 @@ This document summarizes the FreshTrace web application after the backend/API/da
 | Cart and checkout | Customer | Cart add/update/remove, coupon apply, checkout with COD/payos/bank_transfer | `checkout_cart`, PayOS create-payment edge function | `carts`, `cart_items`, `orders`, `order_items`, `payments`, `coupons` |
 | Coupon promotion | Customer | Profile shows signup, loyalty, freeship, cancellation coupons | DB triggers issue coupons on signup/completed order; cancellation RPC issues refund coupon | `coupons`, `orders`, `payments` |
 | Order operations | Manager | Operations page uses search, one workflow-status filter, shipper assignment and per-order tracking timeline | `confirm_order`, `mark_order_preparing`, `assign-delivery` edge function | `orders`, `order_items`, `deliveries`, `order_tracking`, `order_manager_assignments`, `chat_rooms` |
-| Delivery workflow | Employee | Mobile Shipper Deliveries updates status, scans batch QR, collects COD cash/PayOS QR | `update_delivery_status`, `verify_delivery_batch`, `collect_delivery_cash`, PayOS edge function | `deliveries`, `delivery_batch_checks`, `payments`, `delivery_payment_collections`, `payos_requests`, `order_tracking` |
+| Delivery workflow | Employee | Mobile Shipper Deliveries updates status, scans batch QR, collects COD cash/PayOS QR | `update_delivery_status`, `verify_delivery_batch`, `record_delivery_collection`, PayOS edge function | `deliveries`, `delivery_batch_checks`, `payments`, `delivery_payment_collections`, `payos_requests`, `order_tracking` |
 | COD/PayOS settlement | Customer, Employee | Customer selects COD; shipper screen supports cash collection or customer scans shipper PayOS QR | PayOS request creation; webhook/payment result marks paid; cash collection requires remittance before delivery close | `payments`, `payos_requests`, `delivery_payment_collections`, `order_tracking` |
 | Order tracking | Customer, Manager, Employee | Customer Orders and Manager Operations show one workflow filter plus timeline; Manager/Employee status updates | RPCs append tracking rows during checkout, assignment, preparation, delivery and cancellation | `order_tracking`, `orders`, `deliveries` |
 | Cancellation and refund coupon | Customer | Customer can cancel only pending orders; paid pending order returns full-value coupon | `cancel-order` edge function calls hardened cancellation RPC | `orders`, `payments`, `inventory`, `coupons`, `order_tracking` |
@@ -46,7 +46,7 @@ Fulfillment tables: `deliveries`, `delivery_batch_checks`, `delivery_payment_col
 
 Community/support tables: `reviews`, `reports`, `chat_rooms`, `chat_room_members`, `chat_messages`, `chat_message_reactions`, `notifications`, `assistant_logs`.
 
-Important RPC/functions include `search_products`, `checkout_cart`, `confirm_order`, `mark_order_preparing`, `cancel_order`, `update_delivery_status`, `verify_delivery_batch`, `collect_delivery_cash`, `create_chat_room`, `list_my_chat_rooms`, `mark_chat_read`, `trace_batch`, `issue_signup_coupons`, and `issue_loyalty_coupons`.
+Important RPC/functions include `search_products`, `checkout_cart`, `confirm_order`, `mark_order_preparing`, `cancel_order`, `update_delivery_status`, `verify_delivery_batch`, `record_delivery_collection`, `create_chat_room`, `list_my_chat_rooms`, `mark_chat_read`, `issue_signup_coupons`, and `issue_loyalty_coupons`.
 
 ## Technology Stack
 

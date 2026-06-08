@@ -5,7 +5,7 @@ const env = Object.fromEntries(envText.split(/\r?\n/).filter((line) => line.incl
   const [key, ...value] = line.split("=");
   return [key.trim(), value.join("=").trim()];
 }));
-const url = env.VITE_SUPABASE_URL ?? "http://127.0.0.1:54321";
+const url = env.VITE_SUPABASE_URL ?? "http://127.0.0.1:55421";
 const key = env.VITE_SUPABASE_ANON_KEY ?? env.VITE_SUPABASE_PUBLISHABLE_KEY;
 if (!key) throw new Error("frontend/.env.local must define VITE_SUPABASE_ANON_KEY or VITE_SUPABASE_PUBLISHABLE_KEY");
 

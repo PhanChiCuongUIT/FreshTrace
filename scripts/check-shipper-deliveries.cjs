@@ -2,7 +2,7 @@ const { createClient } = require('../frontend/node_modules/@supabase/supabase-js
 
 async function main() {
   const supabase = createClient(
-    'http://127.0.0.1:54321',
+    'http://127.0.0.1:55421',
     'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH',
   )
   const auth = await supabase.auth.signInWithPassword({

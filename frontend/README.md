@@ -39,9 +39,9 @@ full local Supabase runtime or a deployed Supabase project.
 Only browser-safe configuration belongs in this frontend file:
 
 ```env
-VITE_SUPABASE_URL=http://127.0.0.1:54321
+VITE_SUPABASE_URL=http://127.0.0.1:55421
 VITE_SUPABASE_ANON_KEY=your_local_publishable_key
-VITE_API_BASE_URL=http://127.0.0.1:54321/functions/v1
+VITE_API_BASE_URL=http://127.0.0.1:55421/functions/v1
 VITE_QR_TRACE_BASE_URL=http://localhost:5173/trace
 ```
 

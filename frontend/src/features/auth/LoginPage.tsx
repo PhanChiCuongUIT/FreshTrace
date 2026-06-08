@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { authRedirect } from '../../lib/authRedirects'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from './auth-context'
 
@@ -24,9 +25,9 @@ export function LoginPage() {
   const forgotPassword = async () => {
     setError(''); setMessage('')
     if (!email.trim()) return setError('Enter your email first, then request a reset link.')
-    const result = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: `${window.location.origin}/reset-password` })
+    const result = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: authRedirect('/reset-password') })
     if (result.error) setError(result.error.message)
-    else setMessage(import.meta.env.DEV ? 'Password reset email sent. Open the local email inbox at http://127.0.0.1:54324.' : 'Password reset email sent. Check your email inbox.')
+    else setMessage('Password reset email sent. Check your email inbox.')
   }
 
   const fillDemoAccount = (demoEmail: string) => {
@@ -43,12 +44,12 @@ export function LoginPage() {
       {message && <p className="mt-4 text-sm text-green-700">{message}</p>}
       <button className="btn-primary mt-6 w-full" disabled={busy}>{busy ? 'Signing in...' : 'Sign in'}</button>
       <button type="button" className="mt-3 w-full text-sm font-semibold text-brand-700" onClick={forgotPassword}>Forgot password?</button>
-      {/* {import.meta.env.DEV && <div className="mt-6 border-t pt-5"><p className="mb-3 text-center text-xs font-bold uppercase tracking-widest text-black/40">Demo accounts</p><div className="grid grid-cols-2 gap-2">{[
+      {import.meta.env.DEV && <div className="mt-6 border-t pt-5"><p className="mb-3 text-center text-xs font-bold uppercase tracking-widest text-black/40">Demo accounts</p><div className="grid grid-cols-2 gap-2">{[
         ['Customer', 'customer@freshtrace.local'],
         ['Shipper', 'shipper@freshtrace.local'],
         ['Manager', 'manager@freshtrace.local'],
         ['Admin', 'admin@freshtrace.local'],
-      ].map(([label, demoEmail]) => <button key={demoEmail} type="button" className="rounded-xl bg-black/[0.04] px-3 py-2 text-sm font-semibold hover:bg-brand-50 hover:text-brand-700" onClick={() => fillDemoAccount(demoEmail)}>{label}</button>)}</div><p className="mt-3 text-center text-xs text-black/40">Password: FreshTrace!123</p></div>} */}
+      ].map(([label, demoEmail]) => <button key={demoEmail} type="button" className="rounded-xl bg-black/[0.04] px-3 py-2 text-sm font-semibold hover:bg-brand-50 hover:text-brand-700" onClick={() => fillDemoAccount(demoEmail)}>{label}</button>)}</div><p className="mt-3 text-center text-xs text-black/40">Password: FreshTrace!123</p></div>}
       <p className="mt-5 text-center text-sm text-black/55">New to FreshTrace? <Link className="font-semibold text-brand-700" to="/register">Create account</Link></p>
     </form>
   </div>

@@ -7,8 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "backend:start": "supabase start",
-    "backend:start:lite": "supabase start --exclude \"edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector\"",
+    "backend:start": "powershell -ExecutionPolicy Bypass -File scripts/start-supabase.ps1",
+    "backend:start:lite": "powershell -ExecutionPolicy Bypass -File scripts/start-supabase.ps1 -Lite",
     "backend:stop": "supabase stop",
     "backend:reset": "supabase db reset",
     "backend:lint": "supabase db lint --local --level warning",
@@ -16,6 +16,7 @@
     "backend:runtime-fix": "powershell -ExecutionPolicy Bypass -File scripts/fix-edge-runtime-jsr.ps1",
     "seed:demo": "powershell -ExecutionPolicy Bypass -File scripts/seed-demo.ps1",
     "seed:cloudinary": "deno run --allow-read --allow-net scripts/migrate-demo-assets-to-cloudinary.ts",
+    "seed:email-logo": "deno run --allow-read --allow-net scripts/upload-email-logo-to-cloudinary.ts",
     "test:realtime": "powershell -ExecutionPolicy Bypass -File scripts/test-realtime.ps1",
     "test:email": "powershell -ExecutionPolicy Bypass -File scripts/test-email-confirmation.ps1",
     "test:backend": "powershell -ExecutionPolicy Bypass -File scripts/test-local-backend.ps1",

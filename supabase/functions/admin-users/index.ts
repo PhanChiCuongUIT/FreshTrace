@@ -1,4 +1,5 @@
 import { preflight } from "../_shared/cors.ts";
+import { sendMail } from "../_shared/email.ts";
 import { handleError, HttpError, json, readJson } from "../_shared/http.ts";
 import { adminClient, requireProfile } from "../_shared/supabase.ts";
 
@@ -17,7 +18,48 @@ type UpdateBody = {
   userId: string;
   role?: "admin" | "manager" | "employee" | "customer";
   status?: "active" | "inactive" | "banned";
+  reason?: string;
 };
+
+type DeleteBody = {
+  action: "delete";
+  userId: string;
+};
+
+type Body = CreateBody | UpdateBody | DeleteBody;
+
+function escapeHtml(value: string) {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+
+function statusMailHtml(name: string, status: "inactive" | "banned", reason: string) {
+  const title = status === "banned" ? "Your FreshTrace account has been banned" : "Your FreshTrace account has been set to inactive";
+  const description = status === "banned"
+    ? "This action is permanent. The account cannot be restored to active or inactive status."
+    : "Your account is temporarily inactive. Please contact the FreshTrace admin email if you believe this should be reactivated.";
+  const safeName = escapeHtml(name || "FreshTrace user");
+  const safeReason = escapeHtml(reason);
+  return `<!doctype html><html><body style="margin:0;background:#f6faf3;font-family:Arial,sans-serif;color:#17301f">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6faf3;padding:28px">
+      <tr><td align="center">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#fff;border:1px solid #dfe8dc;border-radius:22px;overflow:hidden">
+          <tr><td style="background:#0f6b45;padding:24px 28px;color:#fff">
+            <h1 style="margin:0;font-size:24px;line-height:1.25">${title}</h1>
+          </td></tr>
+          <tr><td style="padding:28px">
+            <p style="font-size:16px;line-height:1.6;margin:0 0 16px">Hello ${safeName},</p>
+            <p style="font-size:15px;line-height:1.6;margin:0 0 18px">${description}</p>
+            <div style="border:1px solid #e4ece1;border-radius:16px;background:#f8fbf6;padding:16px">
+              <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0f6b45">Admin reason</p>
+              <p style="margin:0;font-size:15px;line-height:1.6">${safeReason}</p>
+            </div>
+            <p style="font-size:13px;line-height:1.6;color:#657066;margin:22px 0 0">FreshTrace Governance Team</p>
+          </td></tr>
+        </table>
+      </td></tr>
+    </table>
+  </body></html>`;
+}
 
 Deno.serve(async (request) => {
   const options = preflight(request);
@@ -25,7 +67,7 @@ Deno.serve(async (request) => {
   try {
     if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     const actor = await requireProfile(request, ["admin"]);
-    const body = await readJson<CreateBody | UpdateBody>(request);
+    const body = await readJson<Body>(request);
     const admin = adminClient();
 
     if (body.action === "create") {
@@ -60,10 +102,16 @@ Deno.serve(async (request) => {
     if (body.action === "update") {
       if (!body.userId) throw new HttpError(400, "userId is required");
       const current = await admin.from("users")
-        .select("user_id,status,roles!inner(role_name)").eq("user_id", body.userId).single();
+        .select("user_id,auth_user_id,email,name,status,roles!inner(role_name)").eq("user_id", body.userId).single();
       if (current.error || !current.data) throw new HttpError(404, "User not found");
       const currentRole = (current.data.roles as unknown as { role_name: string }).role_name;
       const removesCurrentRole = body.role && body.role !== currentRole;
+      if (current.data.status === "banned" && body.status && body.status !== "banned") {
+        throw new HttpError(409, "Banned accounts cannot be restored to active or inactive status");
+      }
+      if ((body.status === "inactive" || body.status === "banned") && !body.reason?.trim()) {
+        throw new HttpError(400, "A reason is required when banning or inactivating a user");
+      }
       const disablesAccount = body.status && body.status !== "active";
       if (body.userId === actor.userId && (removesCurrentRole || disablesAccount)) {
         throw new HttpError(409, "Admin cannot demote or disable the current account");
@@ -106,7 +154,38 @@ Deno.serve(async (request) => {
         .select("user_id,email,name,status,roles(role_name)")
         .single();
       if (error || !data) throw new HttpError(404, "User not found");
+      if ((body.status === "inactive" || body.status === "banned") && current.data.email) {
+        await sendMail({
+          to: current.data.email,
+          subject: body.status === "banned" ? "FreshTrace account banned" : "FreshTrace account inactive",
+          html: statusMailHtml(current.data.name, body.status, body.reason!.trim()),
+          text: `Hello ${current.data.name || "FreshTrace user"}, your FreshTrace account is now ${body.status}. Reason: ${body.reason!.trim()}`,
+        });
+      }
       return json(request, { data });
+    }
+
+    if (body.action === "delete") {
+      if (!body.userId) throw new HttpError(400, "userId is required");
+      if (body.userId === actor.userId) throw new HttpError(409, "Admin cannot delete the current account");
+      const current = await admin.from("users")
+        .select("user_id,auth_user_id,status,email,name,roles!inner(role_name)").eq("user_id", body.userId).single();
+      if (current.error || !current.data) throw new HttpError(404, "User not found");
+      if (current.data.status !== "banned") throw new HttpError(409, "Only banned users can be deleted");
+      const currentRole = (current.data.roles as unknown as { role_name: string }).role_name;
+      if (currentRole === "admin") {
+        throw new HttpError(409, "Admin accounts cannot be deleted from this workflow");
+      }
+      const openOrders = await admin.from("orders").select("order_id", { count: "exact", head: true })
+        .eq("user_id", body.userId).in("status", ["pending", "confirmed", "preparing", "delivering"]);
+      if ((openOrders.count ?? 0) > 0) throw new HttpError(409, "User has open orders and cannot be deleted");
+      const activeDeliveries = await admin.from("deliveries").select("delivery_id", { count: "exact", head: true })
+        .eq("employee_id", body.userId).in("status", ["assigned", "picked_up", "delivering"]);
+      if ((activeDeliveries.count ?? 0) > 0) throw new HttpError(409, "User has active deliveries and cannot be deleted");
+
+      const deleted = await admin.auth.admin.deleteUser(current.data.auth_user_id);
+      if (deleted.error) throw new HttpError(409, deleted.error.message);
+      return json(request, { data: { userId: body.userId, deleted: true } });
     }
 
     throw new HttpError(400, "Unsupported action");

@@ -2,43 +2,69 @@ project_id = "freshtrace"
 
 [api]
 enabled = true
-port = 54321
+port = 55421
 schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = 54322
-shadow_port = 54320
+port = 55432
+shadow_port = 55430
 major_version = 15
 
 [studio]
 enabled = true
-port = 54323
+port = 55423
 api_url = "http://127.0.0.1"
 
 [inbucket]
-enabled = true
-port = 54324
+enabled = false
+port = 55424
 
 [auth]
 enabled = true
-site_url = "http://localhost:5173"
+site_url = "http://192.168.1.11:5173"
 additional_redirect_urls = [
   "http://localhost:5173/login",
   "http://localhost:5173/auth/callback",
+  "http://localhost:5173/auth/confirm",
   "http://localhost:5173/reset-password",
+  "http://127.0.0.1:5173/auth/confirm",
   "http://127.0.0.1:5173/login",
   "http://127.0.0.1:5173/reset-password",
+  "http://192.168.1.11:5173/auth/confirm",
   "http://192.168.1.11:5173/login",
   "http://192.168.1.11:5173/reset-password",
 ]
 enable_signup = true
 
+[auth.rate_limit]
+email_sent = 60
+sign_in_sign_ups = 120
+token_verifications = 120
+
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+max_frequency = "5s"
+
+[auth.email.smtp]
+enabled = true
+host = "env(SMTP_HOST)"
+port = 587
+user = "env(SMTP_USER)"
+pass = "env(SMTP_PASS)"
+admin_email = "env(SMTP_ADMIN_EMAIL)"
+sender_name = "env(SMTP_SENDER_NAME)"
+
+[auth.email.template.confirmation]
+subject = "Confirm your FreshTrace account"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your FreshTrace password"
+content_path = "./supabase/templates/recovery.html"
 
 [functions.payos-webhook]
 verify_jwt = false

@@ -32,9 +32,9 @@ if (-not $SkipReset) {
 
 Write-Host ""
 Write-Host "FreshTrace backend is ready:"
-Write-Host "  API:    http://127.0.0.1:54321"
-Write-Host "  REST:   http://127.0.0.1:54321/rest/v1"
-Write-Host "  Studio: http://127.0.0.1:54323 (full mode only)"
+Write-Host "  API:    http://127.0.0.1:55421"
+Write-Host "  REST:   http://127.0.0.1:55421/rest/v1"
+Write-Host "  Studio: http://127.0.0.1:55423 (full mode only)"
 Write-Host ""
 Write-Host "Run Edge Functions in another terminal:"
 Write-Host "  npm run backend:functions"

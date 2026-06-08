@@ -25,7 +25,17 @@
 ## Optional
 
 - `OPENAI_API_KEY` or `GEMINI_API_KEY` for a future AI-assisted Fresh Assistant
-- An email provider key for email notifications
+
+## Required for Real Auth Email
+
+- `SMTP_HOST`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_ADMIN_EMAIL`
+- `SMTP_SENDER_NAME`
+
+For Gmail, enable 2-Step Verification and create an App Password. Use that app
+password as `SMTP_PASS`; do not use your normal Gmail password.
 
 Never send real credentials through chat or commit them to the repository. Store them
 in an ignored local file or set them with `supabase secrets set`.
@@ -50,6 +60,11 @@ Put private integration credentials in `supabase/.env.local`:
 - `PAYOS_CLIENT_ID`
 - `PAYOS_API_KEY`
 - `PAYOS_CHECKSUM_KEY`
+- `SMTP_HOST`
+- `SMTP_USER`
+- `SMTP_PASS`
+- `SMTP_ADMIN_EMAIL`
+- `SMTP_SENDER_NAME`
 
 The root `.env` is retained for reference but is not loaded by the current frontend
 or Edge Function commands.

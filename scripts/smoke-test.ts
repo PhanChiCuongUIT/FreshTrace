@@ -1,4 +1,4 @@
-const baseUrl = Deno.args[0] ?? "http://127.0.0.1:54321";
+const baseUrl = Deno.args[0] ?? "http://127.0.0.1:55421";
 const apiKey = Deno.args[1];
 const secretKey = Deno.args[2];
 if (!apiKey || !secretKey) throw new Error("Usage: deno run --allow-net scripts/smoke-test.ts <url> <publishable-key> <secret-key>");
@@ -38,8 +38,8 @@ const auth = await request("/auth/v1/token?grant_type=password", {
 const token = auth.access_token;
 if (!token) throw new Error("Signup did not return an access token");
 
-// Docker Desktop on Windows can have a small clock skew between Auth and PostgREST.
-await new Promise((resolve) => setTimeout(resolve, 2000));
+// Docker Desktop on Windows can have a clock skew between Auth and PostgREST.
+await new Promise((resolve) => setTimeout(resolve, 10000));
 
 const [profiles, carts, products] = await Promise.all([
   request("/rest/v1/users?select=user_id,name,email,roles(role_name)", {}, token),

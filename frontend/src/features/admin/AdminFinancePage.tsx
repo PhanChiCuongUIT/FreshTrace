@@ -144,24 +144,47 @@ export function AdminFinancePage() {
   const paidCount = selectedPayments.filter(payment => payment.status === 'paid').length
   const pendingCount = selectedPayments.filter(payment => payment.status === 'pending').length
   const failedCount = selectedPayments.filter(payment => payment.status === 'failed').length
-  const exportCsv = () => {
-    const escape = (value: unknown) => `"${String(value ?? '').replaceAll('"', '""')}"`
-    const rows = [
-      ['FreshTrace Financial Report'],
-      ['Period mode', period],
-      ['Selected period', labelPeriod(selectedKey, period)],
-      [],
-      ['Period', 'Revenue', 'Transactions', 'Pending value', 'Failed payments'],
-      [labelPeriod(selectedRow.label, period), selectedRow.revenue, selectedRow.transactions, selectedRow.pending, selectedRow.failed],
-      [],
-      ['Order', 'Method', 'Status', 'Amount', 'Created'],
-      ...selectedPayments.map(payment => [payment.orders?.order_code, payment.method, payment.status, payment.amount, payment.created_at]),
-    ]
-    const blob = new Blob([`\uFEFF${rows.map(row => row.map(escape).join(',')).join('\r\n')}`], { type: 'text/csv;charset=utf-8' })
+  const exportReport = () => {
+    const escapeHtml = (value: unknown) => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;')
+    const periodName = labelPeriod(selectedKey, period)
+    const chartRows = chartKeys.map(key => {
+      const row = periodRows.find(item => item.label === key)
+      return [labelPeriod(key, period), row?.revenue ?? 0, row?.transactions ?? 0, row?.pending ?? 0, row?.failed ?? 0]
+    })
+    const money = (value: number) => currency.format(value)
+    const table = (title: string, headers: string[], rows: Array<Array<unknown>>) => `<h2>${escapeHtml(title)}</h2><table><thead><tr>${headers.map(header => `<th>${escapeHtml(header)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+    const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+      body{font-family:Calibri,Arial,sans-serif;color:#17301f;background:#fff}
+      h1{font-size:32px;color:#0f6b45;margin:0 0 6px;text-align:center;font-weight:800;letter-spacing:.02em}
+      .meta{color:#5d6b61;margin:0 0 24px;text-align:center;font-size:13px}
+      h2{font-size:18px;color:#102b1c;margin:24px 0 8px;font-weight:800;border-left:5px solid #0f6b45;padding-left:10px}
+      table{border-collapse:collapse;width:100%;margin-bottom:22px;border:2px solid #0a4b31}
+      th{background:#0f6b45;color:#fff;font-weight:800;text-align:center;border:2px solid #0a4b31;padding:10px;font-size:13px}
+      td{border:1.5px solid #8ea390;padding:9px;vertical-align:top;font-size:12px}
+      tr:nth-child(even) td{background:#f6faf3}
+      .summary td:first-child{font-weight:700;color:#102b1c}
+      .number{text-align:right}
+    </style></head><body>
+      <h1>FreshTrace Financial Report</h1>
+      <p class="meta">Generated at ${escapeHtml(new Date().toLocaleString('en-US'))} / ${escapeHtml(period)} / ${escapeHtml(periodName)}</p>
+      ${table('Summary', ['Metric', 'Value'], [
+        ['Selected revenue', money(selectedRow.revenue)],
+        ['Pending value', money(selectedRow.pending)],
+        ['Failed payments', selectedRow.failed],
+        ['Total transactions', selectedRow.transactions],
+        ['Paid transactions', paidCount],
+        ['Pending transactions', pendingCount],
+        ['Failed transactions', failedCount],
+      ])}
+      ${table(`Revenue window around selected ${period}`, ['Period', 'Paid revenue', 'Transactions', 'Pending value', 'Failed payments'], chartRows.map(row => [row[0], money(Number(row[1])), row[2], money(Number(row[3])), row[4]]))}
+      ${table('Selected period detail', ['Period', 'Paid revenue', 'Transactions', 'Pending value', 'Failed payments'], [[periodName, money(selectedRow.revenue), selectedRow.transactions, money(selectedRow.pending), selectedRow.failed]])}
+      ${table('Transactions', ['Order code', 'Method', 'Status', 'Amount', 'Created at', 'Payment id'], selectedPayments.map(payment => [payment.orders?.order_code ? `#${payment.orders.order_code}` : '', payment.method.toUpperCase(), payment.status, money(payment.amount), dateTime(payment.created_at), payment.payment_id]))}
+    </body></html>`
+    const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `freshtrace-financial-report-${new Date().toISOString().slice(0, 10)}.csv`
+    anchor.download = `freshtrace-finance-${period}-${periodName.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.xls`
     anchor.click()
     URL.revokeObjectURL(url)
   }
@@ -169,7 +192,7 @@ export function AdminFinancePage() {
   const selectedWeekNo = Number(selectedWeek.slice(-2))
   const selectedMonthYear = Number(selectedMonth.slice(0, 4))
   const selectedMonthNo = Number(selectedMonth.slice(5, 7))
-  return <div><PageHeader eyebrow="Financial control" title="Financial reports" actions={<div className="flex flex-wrap gap-2"><select className="input w-40" value={period} onChange={event => setPeriod(event.target.value as 'week' | 'month' | 'year')}><option value="week">By week</option><option value="month">By month</option><option value="year">By year</option></select>{period === 'week' && <><select className="input w-28" value={selectedWeekYear} onChange={event => setSelectedWeek(`${event.target.value}-W${String(Math.min(selectedWeekNo, weeksInYear(Number(event.target.value)))).padStart(2, '0')}`)}>{yearOptions.map(year => <option key={year}>{year}</option>)}</select><select className="input w-36" value={selectedWeekNo} onChange={event => setSelectedWeek(`${selectedWeekYear}-W${String(event.target.value).padStart(2, '0')}`)}>{Array.from({ length: selectedWeekYear === currentYear ? Number(maxKey.slice(-2)) : weeksInYear(selectedWeekYear) }, (_, index) => index + 1).map(week => <option key={week} value={week}>Week {week}</option>)}</select></>}{period === 'month' && <><select className="input w-36" value={selectedMonthNo} onChange={event => setSelectedMonth(`${selectedMonthYear}-${String(event.target.value).padStart(2, '0')}`)}>{monthNames.map((name, index) => <option key={name} value={index + 1} disabled={selectedMonthYear === currentYear && index + 1 > new Date().getMonth() + 1}>{name}</option>)}</select><select className="input w-28" value={selectedMonthYear} onChange={event => setSelectedMonth(`${event.target.value}-${String(Math.min(selectedMonthNo, Number(event.target.value) === currentYear ? new Date().getMonth() + 1 : 12)).padStart(2, '0')}`)}>{yearOptions.map(year => <option key={year}>{year}</option>)}</select></>}{period === 'year' && <select className="input w-36" value={selectedYear} onChange={event => setSelectedYear(event.target.value)}>{yearOptions.map(year => <option key={year}>{year}</option>)}</select>}<button className="btn-primary" onClick={exportCsv}>Export CSV</button></div>}/>
+  return <div><PageHeader eyebrow="Financial control" title="Financial reports" actions={<div className="flex max-w-full flex-wrap justify-end gap-2"><select className="input" style={{ width: '10rem' }} value={period} onChange={event => setPeriod(event.target.value as 'week' | 'month' | 'year')}><option value="week">By week</option><option value="month">By month</option><option value="year">By year</option></select>{period === 'week' && <><select className="input" style={{ width: '7rem' }} value={selectedWeekYear} onChange={event => setSelectedWeek(`${event.target.value}-W${String(Math.min(selectedWeekNo, weeksInYear(Number(event.target.value)))).padStart(2, '0')}`)}>{yearOptions.map(year => <option key={year}>{year}</option>)}</select><select className="input" style={{ width: '9rem' }} value={selectedWeekNo} onChange={event => setSelectedWeek(`${selectedWeekYear}-W${String(event.target.value).padStart(2, '0')}`)}>{Array.from({ length: selectedWeekYear === currentYear ? Number(maxKey.slice(-2)) : weeksInYear(selectedWeekYear) }, (_, index) => index + 1).map(week => <option key={week} value={week}>Week {week}</option>)}</select></>}{period === 'month' && <><select className="input" style={{ width: '9rem' }} value={selectedMonthNo} onChange={event => setSelectedMonth(`${selectedMonthYear}-${String(event.target.value).padStart(2, '0')}`)}>{monthNames.map((name, index) => <option key={name} value={index + 1} disabled={selectedMonthYear === currentYear && index + 1 > new Date().getMonth() + 1}>{name}</option>)}</select><select className="input" style={{ width: '7rem' }} value={selectedMonthYear} onChange={event => setSelectedMonth(`${event.target.value}-${String(Math.min(selectedMonthNo, Number(event.target.value) === currentYear ? new Date().getMonth() + 1 : 12)).padStart(2, '0')}`)}>{yearOptions.map(year => <option key={year}>{year}</option>)}</select></>}{period === 'year' && <select className="input" style={{ width: '9rem' }} value={selectedYear} onChange={event => setSelectedYear(event.target.value)}>{yearOptions.map(year => <option key={year}>{year}</option>)}</select>}<button className="btn-primary" onClick={exportReport}>Export report</button></div>}/>
     <div className="mt-6 grid gap-4 lg:grid-cols-3"><SparklineCard label="Selected revenue" value={currency.format(selectedRow.revenue)} values={selectedRevenueTrend} footer={labelPeriod(selectedKey, period)}/><SparklineCard label="Pending value" value={currency.format(selectedRow.pending)} values={chartKeys.map(key => periodRows.find(row => row.label === key)?.pending ?? 0)} footer="Unsettled payments in the selected period"/><SparklineCard label="Failed payments" value={selectedRow.failed} values={chartKeys.map(key => periodRows.find(row => row.label === key)?.failed ?? 0)} footer="Payment attempts requiring attention"/></div>
     <div className="mt-6 grid gap-5 xl:grid-cols-2"><VerticalBarChart title={`Revenue around selected ${period}`} items={chartKeys.map(key => ({ label: labelPeriod(key, period), value: periodRows.find(row => row.label === key)?.revenue ?? 0, color: key === selectedKey ? '#16a34a' : undefined }))} valueLabel={currency.format}/><DonutChart title="Selected payment status" items={[{ label: 'Paid', value: paidCount, color: '#16a34a' }, { label: 'Pending', value: pendingCount, color: '#eab308' }, { label: 'Failed', value: failedCount, color: '#ef4444' }]} center={<><b className="text-2xl">{selectedRow.transactions}</b><span className="block text-xs text-black/45">transactions</span></>}/><HorizontalBarChart title="Payment method usage" items={data.methods}/><HorizontalBarChart title="Top completed products" items={data.topProducts} valueLabel={currency.format}/><section className="card overflow-x-auto xl:col-span-2"><div className="p-5 pb-0"><h2 className="text-lg font-black">Transactions for {labelPeriod(selectedKey, period)}</h2></div><table className="mt-3 w-full min-w-[720px] text-left text-sm"><thead className="border-y bg-black/[0.02]"><tr><th className="p-4">Order</th><th>Method</th><th>Amount</th><th>Created</th><th>Status</th></tr></thead><tbody>{selectedPayments.map(payment => <tr key={payment.payment_id} className="border-b last:border-0"><td className="p-4 font-bold">#{payment.orders?.order_code}</td><td>{payment.method.toUpperCase()}</td><td>{currency.format(payment.amount)}</td><td>{dateTime(payment.created_at)}</td><td><Badge tone={payment.status === 'paid' ? 'green' : payment.status === 'failed' ? 'red' : 'orange'}>{payment.status}</Badge></td></tr>)}</tbody></table>{!selectedPayments.length && <p className="p-5 text-center text-sm text-black/50">No transactions in this period.</p>}</section></div>
   </div>

@@ -9,7 +9,7 @@ type LinkItem = readonly [string, string, typeof House]
 const customerLinks: LinkItem[] = [
   ['/', 'Home', House], ['/products', 'Products', Store], ['/rescue', 'Rescue', PackageCheck],
   ['/cart', 'Cart', ShoppingBasket], ['/orders', 'Orders', Boxes], ['/trace', 'Trace', QrCode],
-  ['/assistant', 'Assistant', Bot], ['/chat', 'Chat', MessageCircle],
+  ['/reports', 'Reports', ShieldCheck], ['/assistant', 'Assistant', Bot], ['/chat', 'Chat', MessageCircle],
   ['/notifications', 'Alerts', Bell], ['/profile', 'Profile', UserRound],
 ]
 const shipperLinks: LinkItem[] = [
