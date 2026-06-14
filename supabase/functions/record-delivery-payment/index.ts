@@ -4,8 +4,7 @@ import { requireProfile } from "../_shared/supabase.ts";
 
 type Body = {
   deliveryId: string;
-  method: "cash" | "bank_transfer" | "customer_payos";
-  proofUrl?: string;
+  method: "cash";
 };
 
 Deno.serve(async (request) => {
@@ -15,13 +14,13 @@ Deno.serve(async (request) => {
     if (request.method !== "POST") throw new HttpError(405, "Method not allowed");
     const profile = await requireProfile(request, ["employee", "manager", "admin"]);
     const body = await readJson<Body>(request);
-    if (!body.deliveryId || !["cash", "bank_transfer", "customer_payos"].includes(body.method)) {
-      throw new HttpError(400, "deliveryId and a valid method are required");
+    if (!body.deliveryId || body.method !== "cash") {
+      throw new HttpError(400, "Only a cash COD collection can be recorded manually");
     }
     const { data, error } = await profile.client.rpc("record_delivery_collection", {
       p_delivery_id: body.deliveryId,
-      p_method: body.method,
-      p_proof_url: body.proofUrl ?? null,
+      p_method: "cash",
+      p_proof_url: null,
     });
     if (error) throw new HttpError(400, error.message);
     return json(request, { collectionId: data }, 201);

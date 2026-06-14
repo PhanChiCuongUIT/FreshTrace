@@ -43,7 +43,7 @@ The Assistant now recognizes:
 Each result provides an image, product detail navigation, current batch price,
 expiry date, certificate, and an Add to cart action.
 
-## Added Use Cases
+## Report-Defined Extended Use Cases
 
 ### UC35 - Send a Chat Attachment
 
@@ -76,10 +76,11 @@ expiry date, certificate, and an Add to cart action.
 **Security:** Reaction read/write policies verify room membership. Only the reaction
 owner can remove it.
 
-### UC37 - Customer Analytics Removed
+### Numbering Note - UC37 Is Not Active
 
 This page is no longer part of the active FreshTrace scope. The route, sidebar item,
-and frontend page were removed. Admin financial reporting remains in UC38 and UC42.
+and frontend page were removed. The final report intentionally skips UC37. Admin
+financial reporting remains in UC38 and UC42.
 
 ### UC38 - Review Financial Reports
 
@@ -122,7 +123,7 @@ This is consistent with the report's order, assignment, and delivery use cases. 
 seller-managed marketplace would require a different domain model: stores,
 manager-to-store ownership, parent orders, supplier sub-orders, split payments,
 multiple deliveries, and partial cancellation/refund rules. Those concepts are not
-part of the current 34-use-case contract and are intentionally not implied.
+part of the current report contract and are intentionally not implied.
 
 ### UC40 - Settle COD at the Doorstep with payOS
 
@@ -167,3 +168,26 @@ coupons, email-based password recovery, role-authorized batch QR rendering, and
 consistent search/filter controls across Admin and Manager operational pages. The
 complete Actor-to-Database flow is recorded in [FreshTrace End-to-End Use Case
 Coverage](use-case-coverage.md).
+
+## June 13, 2026 Verification Additions
+
+### Related User Reports
+
+Customers may report only users connected through their FreshTrace orders or
+conversations. Admin resolution notifies the reporter and the reported user. For
+order reports, the assigned Manager also receives a link to the affected order.
+
+### Coupon Reward Policy
+
+Only orders whose Order status is `completed` and Delivery status is `delivered`
+count toward spending and order-count milestones. Rewards are idempotent through a
+unique Customer/milestone key. A coupon becomes unavailable as soon as checkout
+uses it, is restored when an eligible pending order is cancelled, and is deleted
+after the order completes successfully.
+
+### Catalog Integrity
+
+Manager CRUD was integration-tested for Suppliers, Categories, Products, Batches,
+Inventory, Prices and Fresh Rescue. Unsafe deletes are rejected by foreign keys and
+the Catalog presents a clear deactivate/lock alternative. Editing an approved
+Supplier is a resubmission and requires Admin approval again.

@@ -264,6 +264,67 @@ async function createCompletedOrder(
   return orderId;
 }
 
+async function createDeliveryOrder(
+  customer: SignedInUser,
+  manager: SignedInUser,
+  shipper: SignedInUser,
+  targetStatus: "assigned" | "picked_up" | "delivering",
+  note: string,
+  productId: string,
+  batchId: string,
+) {
+  const existing = await admin.from("orders").select("order_id")
+    .eq("user_id", customer.userId)
+    .eq("note", note)
+    .maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data) return existing.data.order_id as string;
+
+  await addCartItem(customer, productId, batchId, 1, `Prepared for ${targetStatus}`);
+  const checkout = await customer.client.rpc("checkout_cart", {
+    p_delivery_address: customer.address,
+    p_payment_method: "cod",
+    p_delivery_fee: 15000,
+    p_note: note,
+  });
+  if (checkout.error) throw checkout.error;
+  const orderId = checkout.data as string;
+  const confirmed = await manager.client.rpc("confirm_order", { p_order_id: orderId });
+  if (confirmed.error) throw confirmed.error;
+  const preparing = await manager.client.rpc("mark_order_preparing", { p_order_id: orderId });
+  if (preparing.error) throw preparing.error;
+  const assigned = await manager.client.rpc("assign_delivery", {
+    p_order_id: orderId,
+    p_employee_id: shipper.userId,
+  });
+  if (assigned.error) throw assigned.error;
+  if (targetStatus === "assigned") return orderId;
+
+  const deliveryId = assigned.data as string;
+  const verified = await shipper.client.rpc("verify_delivery_batch", {
+    p_delivery_id: deliveryId,
+    p_batch_id: batchId,
+  });
+  if (verified.error) throw verified.error;
+  const pickedUp = await shipper.client.rpc("update_delivery_status", {
+    p_delivery_id: deliveryId,
+    p_status: "picked_up",
+    p_note: "Batch verified and collected from the manager",
+    p_proof_image_url: null,
+  });
+  if (pickedUp.error) throw pickedUp.error;
+  if (targetStatus === "picked_up") return orderId;
+
+  const delivering = await shipper.client.rpc("update_delivery_status", {
+    p_delivery_id: deliveryId,
+    p_status: "delivering",
+    p_note: "Delivery is on the way to the customer",
+    p_proof_image_url: null,
+  });
+  if (delivering.error) throw delivering.error;
+  return orderId;
+}
+
 async function ensureCustomerContent(customer: SignedInUser, orderId: string, productId = "30000000-0000-0000-0000-000000000007") {
   const review = await admin.from("reviews").upsert({
     user_id: customer.userId,
@@ -353,6 +414,33 @@ await createPendingOrder(
   "30000000-0000-0000-0000-000000000012",
   "40000000-0000-0000-0000-000000000012",
 );
+await createDeliveryOrder(
+  customer,
+  manager,
+  employee,
+  "assigned",
+  "Assigned delivery sample",
+  "30000000-0000-0000-0000-000000000003",
+  "40000000-0000-0000-0000-000000000003",
+);
+await createDeliveryOrder(
+  customerLan,
+  manager,
+  secondEmployee,
+  "picked_up",
+  "Picked-up delivery sample",
+  "30000000-0000-0000-0000-000000000006",
+  "40000000-0000-0000-0000-000000000006",
+);
+await createDeliveryOrder(
+  customer,
+  manager,
+  employee,
+  "delivering",
+  "Delivering order sample",
+  "30000000-0000-0000-0000-000000000010",
+  "40000000-0000-0000-0000-000000000010",
+);
 const completedOrderId = await createCompletedOrder(
   customer,
   manager,
@@ -366,8 +454,35 @@ const secondCompletedOrderId = await createCompletedOrder(
   "30000000-0000-0000-0000-000000000009",
   "40000000-0000-0000-0000-000000000009",
 );
+const thirdCompletedOrderId = await createCompletedOrder(
+  customer,
+  manager,
+  secondEmployee,
+  "Completed broccoli order",
+  "30000000-0000-0000-0000-000000000011",
+  "40000000-0000-0000-0000-000000000011",
+);
+const fourthCompletedOrderId = await createCompletedOrder(
+  customerLan,
+  manager,
+  employee,
+  "Completed rice order",
+  "30000000-0000-0000-0000-000000000008",
+  "40000000-0000-0000-0000-000000000008",
+);
+const fifthCompletedOrderId = await createCompletedOrder(
+  customer,
+  manager,
+  secondEmployee,
+  "Completed pomelo order",
+  "30000000-0000-0000-0000-000000000015",
+  "40000000-0000-0000-0000-000000000015",
+);
 await ensureCustomerContent(customer, completedOrderId);
 await ensureCustomerContent(customerLan, secondCompletedOrderId, "30000000-0000-0000-0000-000000000009");
+await ensureCustomerContent(customer, thirdCompletedOrderId, "30000000-0000-0000-0000-000000000011");
+await ensureCustomerContent(customerLan, fourthCompletedOrderId, "30000000-0000-0000-0000-000000000008");
+await ensureCustomerContent(customer, fifthCompletedOrderId, "30000000-0000-0000-0000-000000000015");
 await ensureConversation(
   customer,
   manager,
@@ -382,6 +497,180 @@ await ensureConversation(
   completedOrderId,
   "Thank you for delivering the demo order.",
 );
+
+const reportSamples = [
+  { status: "pending", type: "product_quality", description: "The vegetables arrived bruised and need quality review.", response: null },
+  { status: "processing", type: "delivery", description: "The delivery arrived later than the selected time window.", response: "The delivery route is being reviewed." },
+  { status: "resolved", type: "payment", description: "The payment was recorded twice in the order history.", response: "The duplicate record was corrected." },
+  { status: "rejected", type: "traceability", description: "The customer requested a batch certificate that was already displayed.", response: "The traceability information was complete." },
+  { status: "pending", type: "product_quality", description: "The product freshness did not match the listing description.", response: null },
+] as const;
+for (const [index, sample] of reportSamples.entries()) {
+  const owner = index % 2 === 0 ? customer : customerLan;
+  const orderId = index % 2 === 0 ? completedOrderId : secondCompletedOrderId;
+  const existing = await admin.from("reports").select("report_id")
+    .eq("user_id", owner.userId).eq("description", sample.description).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (!existing.data) {
+    const closed = sample.status === "resolved" || sample.status === "rejected";
+    const inserted = await admin.from("reports").insert({
+      user_id: owner.userId,
+      order_id: orderId,
+      product_id: index % 2 === 0
+        ? "30000000-0000-0000-0000-000000000007"
+        : "30000000-0000-0000-0000-000000000009",
+      type: sample.type,
+      description: sample.description,
+      status: sample.status,
+      response: sample.response,
+      resolved_by: closed ? systemAdmin.userId : null,
+      resolved_at: closed ? new Date().toISOString() : null,
+    });
+    if (inserted.error) throw inserted.error;
+  }
+}
+
+const managerRoom = await customer.client.rpc("create_chat_room", {
+  p_type: "customer_manager",
+  p_other_user_id: manager.userId,
+  p_order_id: null,
+  p_product_id: null,
+});
+if (managerRoom.error) throw managerRoom.error;
+const conversationMessages = [
+  { sender_id: customer.userId, message: "Which Fresh Rescue products are available today?" },
+  { sender_id: manager.userId, message: "Guava and sweet potato deals are currently available." },
+  { sender_id: customer.userId, message: "Can I combine a Rescue deal with a coupon?" },
+  { sender_id: manager.userId, message: "Yes, if the order meets the coupon minimum amount." },
+  { sender_id: customer.userId, message: "Thank you, I will review the cart total." },
+];
+for (const item of conversationMessages) {
+  const existing = await admin.from("chat_messages").select("message_id")
+    .eq("room_id", managerRoom.data).eq("message", item.message).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (!existing.data) {
+    const inserted = await admin.from("chat_messages").insert({
+      room_id: managerRoom.data,
+      sender_id: item.sender_id,
+      message: item.message,
+    });
+    if (inserted.error) throw inserted.error;
+  }
+}
+
+const assistantSamples = [
+  ["Show the cheapest vegetables", "Here are the lowest-priced available vegetables.", "cheapest"],
+  ["Which products expire soon?", "These batches have the nearest expiry dates.", "expiring_soon"],
+  ["Find Fresh Rescue deals", "These active Fresh Rescue deals are available.", "saving"],
+  ["Show certified products", "These products include listed certificates.", "certified"],
+  ["Find rice products", "ST25 Brown Rice matches your request.", "product:rice"],
+];
+for (const [question, answer, intent] of assistantSamples) {
+  const existing = await admin.from("assistant_logs").select("log_id")
+    .eq("user_id", customer.userId).eq("question", question).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (!existing.data) {
+    const inserted = await admin.from("assistant_logs").insert({
+      user_id: customer.userId,
+      question,
+      answer,
+      intent,
+      recommended_product_ids: [],
+    });
+    if (inserted.error) throw inserted.error;
+  }
+}
+
+const couponSamples = [
+  { code: "HISTORY-EXPIRED", status: "expired", amount: 25000, remaining_amount: 25000, expires_at: new Date(Date.now() - 86400000).toISOString(), used_at: null, description: "Expired coupon example" },
+  { code: "HISTORY-CANCELLED", status: "cancelled", amount: 30000, remaining_amount: 30000, expires_at: new Date(Date.now() + 86400000).toISOString(), used_at: null, description: "Cancelled coupon example" },
+] as const;
+for (const sample of couponSamples) {
+  const inserted = await admin.from("coupons").upsert({
+    user_id: customer.userId,
+    source_order_id: null,
+    coupon_type: "fixed_amount",
+    min_order_amount: 0,
+    ...sample,
+  }, { onConflict: "code" });
+  if (inserted.error) throw inserted.error;
+}
+
+const customerCarts = await admin.from("carts").select("cart_id,user_id")
+  .in("user_id", [customer.userId, customerLan.userId]);
+if (customerCarts.error) throw customerCarts.error;
+const cartByUser = Object.fromEntries(customerCarts.data.map((cart) => [cart.user_id, cart.cart_id]));
+const cartSamples = [
+  [customer.userId, "30000000-0000-0000-0000-000000000001", "40000000-0000-0000-0000-000000000001"],
+  [customer.userId, "30000000-0000-0000-0000-000000000002", "40000000-0000-0000-0000-000000000002"],
+  [customer.userId, "30000000-0000-0000-0000-000000000003", "40000000-0000-0000-0000-000000000003"],
+  [customerLan.userId, "30000000-0000-0000-0000-000000000004", "40000000-0000-0000-0000-000000000004"],
+  [customerLan.userId, "30000000-0000-0000-0000-000000000005", "40000000-0000-0000-0000-000000000005"],
+];
+for (const [userId, productId, batchId] of cartSamples) {
+  const existing = await admin.from("cart_items").select("cart_item_id")
+    .eq("cart_id", cartByUser[userId]).eq("batch_id", batchId).maybeSingle();
+  if (existing.error) throw existing.error;
+  const values = {
+    cart_id: cartByUser[userId],
+    product_id: productId,
+    batch_id: batchId,
+    quantity: 1,
+    note: "Saved for the next FreshTrace order",
+  };
+  const result = existing.data
+    ? await admin.from("cart_items").update(values).eq("cart_item_id", existing.data.cart_item_id)
+    : await admin.from("cart_items").insert(values);
+  if (result.error) throw result.error;
+}
+
+const chatMessages = await admin.from("chat_messages").select("message_id,sender_id")
+  .eq("room_id", managerRoom.data).order("created_at").limit(5);
+if (chatMessages.error) throw chatMessages.error;
+for (const [index, message] of chatMessages.data.entries()) {
+  const reactingUser = message.sender_id === customer.userId ? manager.userId : customer.userId;
+  const reaction = ["like", "love", "wow", "laugh", "sad"][index];
+  const existing = await admin.from("chat_message_reactions").select("reaction_id")
+    .eq("message_id", message.message_id).eq("user_id", reactingUser).maybeSingle();
+  if (existing.error) throw existing.error;
+  const result = existing.data
+    ? await admin.from("chat_message_reactions").update({ reaction }).eq("reaction_id", existing.data.reaction_id)
+    : await admin.from("chat_message_reactions").insert({
+      message_id: message.message_id,
+      user_id: reactingUser,
+      reaction,
+    });
+  if (result.error) throw result.error;
+}
+
+const paymentSamples = await admin.from("payments").select("payment_id,amount")
+  .order("created_at").limit(5);
+if (paymentSamples.error) throw paymentSamples.error;
+for (const [index, payment] of paymentSamples.data.entries()) {
+  const statuses = ["pending", "paid", "cancelled", "failed", "paid"] as const;
+  const requestStatus = statuses[index];
+  const providerOrderCode = 9900001 + index;
+  const existing = await admin.from("payos_requests").select("request_id")
+    .eq("provider_order_code", providerOrderCode).maybeSingle();
+  if (existing.error) throw existing.error;
+  const values = {
+    payment_id: payment.payment_id,
+    purpose: "checkout",
+    requested_by: index % 2 === 0 ? customer.userId : customerLan.userId,
+    provider_order_code: providerOrderCode,
+    amount: payment.amount,
+    status: requestStatus,
+    checkout_url: requestStatus === "pending" ? `https://pay.freshtrace.local/${providerOrderCode}` : null,
+    qr_code: requestStatus === "pending" ? `FRESHTRACE-PAYOS-${providerOrderCode}` : null,
+    transaction_id: requestStatus === "paid" ? `PAYOS-DEMO-${index + 1}` : null,
+    paid_at: requestStatus === "paid" ? new Date().toISOString() : null,
+    provider_payload: { source: "FreshTrace representative data", status: requestStatus },
+  };
+  const result = existing.data
+    ? await admin.from("payos_requests").update(values).eq("request_id", existing.data.request_id)
+    : await admin.from("payos_requests").insert(values);
+  if (result.error) throw result.error;
+}
 
 const adminNotice = await admin.from("notifications").select("notification_id")
   .eq("user_id", systemAdmin.userId)

@@ -22,7 +22,7 @@ export function OrdersPage() {
   const { profile } = useAuth()
   const client = useQueryClient()
   const navigate = useNavigate()
-  const { confirm, toast } = useFeedback()
+  const { confirm, prompt: askText, toast } = useFeedback()
   const [query, setQuery] = useState('')
   const [workflowStatus, setWorkflowStatus] = useState('')
   const orders = useQuery({ queryKey: ['orders', profile?.user_id], queryFn: async () => {
@@ -40,9 +40,26 @@ export function OrdersPage() {
     } catch (error) { toast(String(error), 'error') }
   }
   const report = async (order: Order) => {
-    const description = prompt('Describe the problem')
+    const delivery = one(order.deliveries)
+    const description = await askText({
+      title: `Report issue for order #${order.order_code}`,
+      description: delivery?.status === 'delivered'
+        ? 'If the order is marked delivered but you did not receive it, describe what happened. Admin will review this with the shipper and manager.'
+        : 'Describe the order, product, delivery, or payment problem. Admin will review it from the Reports workspace.',
+      placeholder: 'Example: The order is marked delivered but I did not receive it...',
+      confirmLabel: 'Submit report',
+      required: true,
+    })
     if (!description) return
-    const result = await supabase.from('reports').insert({ user_id: profile!.user_id, order_id: order.order_id, type: 'order_issue', description })
+    const result = await supabase.from('reports')
+      .insert({
+        user_id: profile!.user_id,
+        order_id: order.order_id,
+        type: delivery?.status === 'delivered' ? 'delivery_not_received' : 'order_issue',
+        description: description.trim(),
+      })
+      .select('report_id')
+      .single()
     if (result.error) toast(result.error.message, 'error')
     else toast('Report submitted to Admin')
   }
@@ -50,7 +67,16 @@ export function OrdersPage() {
     const rating = Number(prompt('Rating from 1 to 5', '5'))
     if (!Number.isInteger(rating) || rating < 1 || rating > 5) return toast('Rating must be from 1 to 5', 'error')
     const comment = prompt('Review comment') ?? null
-    const result = await supabase.from('reviews').upsert({ user_id: profile!.user_id, order_id: order.order_id, product_id: productId, rating, comment }, { onConflict: 'user_id,product_id,order_id' })
+    const result = await supabase.from('reviews')
+      .upsert({
+        user_id: profile!.user_id,
+        order_id: order.order_id,
+        product_id: productId,
+        rating,
+        comment: comment?.trim() || null,
+      }, { onConflict: 'user_id,product_id,order_id' })
+      .select('review_id')
+      .single()
     if (result.error) toast(result.error.message, 'error')
     else toast('Review saved')
   }
@@ -76,7 +102,7 @@ export function OrdersPage() {
       return <article className="card overflow-hidden" key={order.order_id}>
         <div className="bg-gradient-to-r from-brand-50 to-blue-50 p-5"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="font-black">Order #{order.order_code}</h2><p className="text-sm text-black/50">{dateTime(order.created_at)} / {order.delivery_address}</p></div><div className="flex gap-2"><Badge tone={order.status === 'completed' ? 'green' : order.status === 'cancelled' ? 'red' : 'orange'}>{order.status}</Badge><Badge tone={payment?.status === 'paid' ? 'green' : 'blue'}>{payment?.status ?? 'unpaid'}</Badge></div></div>{latest && <div className="mt-4 flex items-center gap-3 rounded-2xl bg-white/75 p-3"><Truck className="text-blue-600"/><div><b className="capitalize">{latest.status.replaceAll('_', ' ')}</b><p className="text-xs text-black/45">{latest.note ?? 'Tracking updated'} / {dateTime(latest.created_at)}</p></div></div>}</div>
         <div className="space-y-2 border-y p-5">{order.order_items.map(item => { const batch = one(item.batches); return <div key={item.order_item_id} className="flex flex-wrap items-center justify-between gap-3 text-sm"><span>{item.product_name} x {item.quantity} {item.unit}</span><div className="flex flex-wrap items-center gap-3"><BatchQrButton batchId={item.batch_id} batchCode={batch?.batch_code} label="Batch QR"/><b>{currency.format(item.price * item.quantity)}</b>{order.status === 'completed' && <button className="font-bold text-brand-700" onClick={() => review(order, item.product_id)}>Review</button>}</div></div> })}</div>
-        <details className="m-5 rounded-2xl bg-black/[0.03] p-4" open><summary className="cursor-pointer text-sm font-bold">Order tracking ({tracking.length})</summary><ol className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">{tracking.map(item => <li key={item.tracking_id} className="rounded-2xl bg-white p-3 shadow-sm"><div className="flex items-center gap-2">{item.status.includes('delivered') || item.status === 'completed' ? <CheckCircle2 size={17} className="text-green-600"/> : <Clock3 size={17} className="text-blue-600"/>}<b className="capitalize">{item.status.replaceAll('_', ' ')}</b></div><p className="mt-1 text-xs text-black/45">{dateTime(item.created_at)}{item.note ? ` / ${item.note}` : ''}</p></li>)}</ol></details>
+        <details className="m-5 rounded-2xl bg-black/[0.03] p-4"><summary className="cursor-pointer text-sm font-bold">Order tracking ({tracking.length})</summary><ol className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">{tracking.map(item => <li key={item.tracking_id} className="rounded-2xl bg-white p-3 shadow-sm"><div className="flex items-center gap-2">{item.status.includes('delivered') || item.status === 'completed' ? <CheckCircle2 size={17} className="text-green-600"/> : <Clock3 size={17} className="text-blue-600"/>}<b className="capitalize">{item.status.replaceAll('_', ' ')}</b></div><p className="mt-1 text-xs text-black/45">{dateTime(item.created_at)}{item.note ? ` / ${item.note}` : ''}</p></li>)}</ol></details>
         <div className="flex flex-wrap items-center justify-between gap-3 p-5 pt-0"><div><span className="text-sm text-black/50">Delivery: </span><b className="capitalize">{delivery?.status ?? 'not assigned'}</b>{payment?.method === 'cod' && delivery?.status === 'delivering' && payment.status === 'pending' && <p className="text-xs text-blue-700">Pay cash or scan the payOS QR shown on the Shipper's screen.</p>}</div><div className="flex flex-wrap items-center gap-4"><button className="text-sm font-bold text-brand-700" onClick={() => navigate(`/chat?shareOrder=${order.order_id}`)}><MessageCircle className="mr-1 inline" size={16}/>Share</button><button className="text-sm font-bold text-orange-700" onClick={() => report(order)}>Report issue</button><b>{currency.format(order.total_amount)}</b>{order.status === 'pending' && <button className="text-sm font-bold text-red-600" onClick={() => cancel(order.order_id)}>Cancel order</button>}</div></div>
       </article>
     })}</div>

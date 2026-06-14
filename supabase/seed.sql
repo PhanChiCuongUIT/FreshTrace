@@ -3,7 +3,8 @@ insert into public.categories (category_id, name, description) values
   ('10000000-0000-0000-0000-000000000002', 'Fruit', 'Seasonal fresh fruit'),
   ('10000000-0000-0000-0000-000000000003', 'Dry Goods', 'Rice, grains, and packaged food'),
   ('10000000-0000-0000-0000-000000000004', 'Mushrooms', 'Fresh and dried edible mushrooms'),
-  ('10000000-0000-0000-0000-000000000005', 'Herbs', 'Fresh culinary herbs')
+  ('10000000-0000-0000-0000-000000000005', 'Herbs', 'Fresh culinary herbs'),
+  ('10000000-0000-0000-0000-000000000006', 'Meat', 'Chilled traceable meat products')
 on conflict do nothing;
 
 insert into public.suppliers (
@@ -34,6 +35,24 @@ insert into public.suppliers (
     'VietGAP application pending',
     'pending',
     'Pending supplier record for the Admin approval use case.',
+    null
+  ),
+  (
+    '20000000-0000-0000-0000-000000000004',
+    'Central Highlands Clean Farm',
+    'Pleiku, Gia Lai',
+    'VietGAP-GL-2026',
+    'approved',
+    'Certified vegetables and herbs from the Central Highlands.',
+    now()
+  ),
+  (
+    '20000000-0000-0000-0000-000000000005',
+    'River Market Produce',
+    'Can Tho',
+    'Certificate review failed',
+    'rejected',
+    'Rejected supplier retained to demonstrate governance status filtering.',
     null
   )
 on conflict do nothing;
@@ -148,6 +167,42 @@ insert into public.products (
     'Small crunchy cucumbers for salads and snacks.',
     'kg',
     'VietGAP'
+  ),
+  (
+    '30000000-0000-0000-0000-000000000013',
+    '10000000-0000-0000-0000-000000000001',
+    '20000000-0000-0000-0000-000000000004',
+    'Purple Sweet Potato',
+    'Naturally sweet purple potatoes from Gia Lai.',
+    'kg',
+    'VietGAP'
+  ),
+  (
+    '30000000-0000-0000-0000-000000000014',
+    '10000000-0000-0000-0000-000000000005',
+    '20000000-0000-0000-0000-000000000004',
+    'Fresh Coriander',
+    'Aromatic coriander harvested on the delivery day.',
+    'bunch',
+    'VietGAP'
+  ),
+  (
+    '30000000-0000-0000-0000-000000000015',
+    '10000000-0000-0000-0000-000000000002',
+    '20000000-0000-0000-0000-000000000002',
+    'Nam Roi Pomelo',
+    'Juicy pomelo from the Mekong Delta.',
+    'fruit',
+    'Organic'
+  ),
+  (
+    '30000000-0000-0000-0000-000000000016',
+    '10000000-0000-0000-0000-000000000006',
+    '20000000-0000-0000-0000-000000000004',
+    'Grass-fed Beef Tenderloin',
+    'Chilled grass-fed beef with farm and batch traceability.',
+    'kg',
+    'VietGAHP'
   )
 on conflict do nothing;
 
@@ -166,6 +221,10 @@ from (values
   ('30000000-0000-0000-0000-000000000010'::uuid, 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?auto=format&fit=crop&w=900&q=80'),
   ('30000000-0000-0000-0000-000000000011'::uuid, 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&w=900&q=80'),
   ('30000000-0000-0000-0000-000000000012'::uuid, 'https://images.unsplash.com/photo-1604977042946-1eecc30f269e?auto=format&fit=crop&w=900&q=80')
+  ,('30000000-0000-0000-0000-000000000013'::uuid, 'https://images.unsplash.com/photo-1596097635121-14b63b7a0c19?auto=format&fit=crop&w=900&q=80')
+  ,('30000000-0000-0000-0000-000000000014'::uuid, 'https://images.unsplash.com/photo-1588879460618-9249e7d947d1?auto=format&fit=crop&w=900&q=80')
+  ,('30000000-0000-0000-0000-000000000015'::uuid, 'https://images.unsplash.com/photo-1577234286642-fc512a5f8f11?auto=format&fit=crop&w=900&q=80')
+  ,('30000000-0000-0000-0000-000000000016'::uuid, 'https://images.unsplash.com/photo-1603048297172-c92544798d5a?auto=format&fit=crop&w=900&q=80')
 ) as images(product_id, image_url)
 where product.product_id = images.product_id;
 
@@ -292,6 +351,46 @@ insert into public.batches (
     current_date + 2,
     75,
     'Cu Chi, Ho Chi Minh City'
+  ),
+  (
+    '40000000-0000-0000-0000-000000000013',
+    '30000000-0000-0000-0000-000000000013',
+    '20000000-0000-0000-0000-000000000004',
+    'FT-POTATO-001',
+    current_date - 3,
+    current_date + 2,
+    55,
+    'Pleiku, Gia Lai'
+  ),
+  (
+    '40000000-0000-0000-0000-000000000014',
+    '30000000-0000-0000-0000-000000000014',
+    '20000000-0000-0000-0000-000000000004',
+    'FT-CORIANDER-001',
+    current_date,
+    current_date + 1,
+    45,
+    'Pleiku, Gia Lai'
+  ),
+  (
+    '40000000-0000-0000-0000-000000000015',
+    '30000000-0000-0000-0000-000000000015',
+    '20000000-0000-0000-0000-000000000002',
+    'FT-POMELO-001',
+    current_date - 4,
+    current_date + 12,
+    50,
+    'Vinh Long'
+  ),
+  (
+    '40000000-0000-0000-0000-000000000016',
+    '30000000-0000-0000-0000-000000000016',
+    '20000000-0000-0000-0000-000000000004',
+    'FT-BEEF-001',
+    current_date - 1,
+    current_date + 7,
+    35,
+    'Bao Loc, Lam Dong'
   )
 on conflict do nothing;
 
@@ -308,6 +407,10 @@ insert into public.prices (product_id, batch_id, price, price_type) values
   ('30000000-0000-0000-0000-000000000010', '40000000-0000-0000-0000-000000000010', 95000, 'normal'),
   ('30000000-0000-0000-0000-000000000011', '40000000-0000-0000-0000-000000000011', 36000, 'normal'),
   ('30000000-0000-0000-0000-000000000012', '40000000-0000-0000-0000-000000000012', 28000, 'normal')
+  ,('30000000-0000-0000-0000-000000000013', '40000000-0000-0000-0000-000000000013', 34000, 'normal')
+  ,('30000000-0000-0000-0000-000000000014', '40000000-0000-0000-0000-000000000014', 16000, 'normal')
+  ,('30000000-0000-0000-0000-000000000015', '40000000-0000-0000-0000-000000000015', 72000, 'normal')
+  ,('30000000-0000-0000-0000-000000000016', '40000000-0000-0000-0000-000000000016', 285000, 'normal')
 on conflict do nothing;
 
 insert into public.fresh_rescue_deals (
@@ -339,7 +442,42 @@ insert into public.fresh_rescue_deals (
     28000,
     19000,
     now() + interval '30 hours'
+  ),
+  (
+    '50000000-0000-0000-0000-000000000005',
+    '40000000-0000-0000-0000-000000000013',
+    'Sweet Potato Rescue',
+    'Use soon for soup, roasting, or healthy snacks.',
+    34000,
+    23000,
+    now() + interval '30 hours'
+  ),
+  (
+    '50000000-0000-0000-0000-000000000006',
+    '40000000-0000-0000-0000-000000000014',
+    'Coriander Rescue',
+    'Fresh herbs discounted for meals today.',
+    16000,
+    9000,
+    now() + interval '18 hours'
   )
 on conflict do nothing;
+
+select public.sync_batch_statuses();
+
+update public.fresh_rescue_deals
+set status = 'inactive'
+where deal_id = '50000000-0000-0000-0000-000000000002';
+
+update public.fresh_rescue_deals
+set status = 'expired',
+    start_at = now() - interval '3 days',
+    end_at = now() - interval '1 day'
+where deal_id = '50000000-0000-0000-0000-000000000003';
+
+update public.inventory
+set quantity_available = 0,
+    last_updated = now()
+where batch_id = '40000000-0000-0000-0000-000000000014';
 
 select public.sync_batch_statuses();

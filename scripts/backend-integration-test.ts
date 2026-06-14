@@ -177,6 +177,32 @@ const { error: collectionError } = await employee.client.rpc("record_delivery_co
   p_proof_url: null,
 });
 if (collectionError) throw collectionError;
+await expectFailure("bank transfer cannot be marked paid manually", () =>
+  employee.client.rpc("record_delivery_collection", {
+    p_delivery_id: deliveryId,
+    p_method: "bank_transfer",
+    p_proof_url: null,
+  }));
+const pendingCollection = await admin.from("delivery_payment_collections")
+  .select("collection_id,payment_id,amount,remittance_status,payments(status)")
+  .eq("delivery_id", deliveryId)
+  .single();
+const pendingCollectionData = pendingCollection.data as {
+  collection_id: string;
+  payment_id: string;
+  amount: number;
+  remittance_status: string;
+  payments: { status: string } | Array<{ status: string }> | null;
+} | null;
+const pendingPayment = Array.isArray(pendingCollectionData?.payments)
+  ? pendingCollectionData?.payments[0] ?? null
+  : pendingCollectionData?.payments ?? null;
+if (pendingCollection.error
+  || !pendingCollectionData
+  || pendingCollectionData.remittance_status !== "pending"
+  || pendingPayment?.status !== "pending") {
+  throw pendingCollection.error ?? new Error("Cash collection incorrectly settled the payment");
+}
 await expectFailure("cash delivery requires payOS remittance", () =>
   employee.client.rpc("update_delivery_status", {
     p_delivery_id: deliveryId,
@@ -184,10 +210,34 @@ await expectFailure("cash delivery requires payOS remittance", () =>
     p_note: "Must fail before cash remittance",
     p_proof_image_url: null,
   }));
-const { error: remittanceError } = await admin.from("delivery_payment_collections")
-  .update({ remittance_status: "paid", remitted_at: new Date().toISOString() })
-  .eq("delivery_id", deliveryId);
-if (remittanceError) throw remittanceError;
+const providerOrderCode = Date.now() * 100 + 51;
+const remittanceRequest = await admin.from("payos_requests").insert({
+  payment_id: pendingCollectionData.payment_id,
+  delivery_id: deliveryId,
+  collection_id: pendingCollectionData.collection_id,
+  purpose: "shipper_remittance",
+  requested_by: employee.userId,
+  provider_order_code: providerOrderCode,
+  amount: pendingCollectionData.amount,
+  checkout_url: `https://pay.payos.vn/web/${providerOrderCode}`,
+  qr_code: `PAYOS-TEST-${providerOrderCode}`,
+  status: "pending",
+}).select("request_id").single();
+if (remittanceRequest.error) throw remittanceRequest.error;
+await expectFailure("payOS confirmation requires an amount", () =>
+  admin.rpc("confirm_payos_request", {
+    p_provider_order_code: providerOrderCode,
+    p_amount: null,
+    p_transaction_id: "invalid-remittance",
+    p_payload: { test: true },
+  }));
+const remittance = await admin.rpc("confirm_payos_request", {
+  p_provider_order_code: providerOrderCode,
+  p_amount: pendingCollectionData.amount,
+  p_transaction_id: `test-remittance-${suffix}`,
+  p_payload: { test: true, purpose: "shipper_remittance" },
+});
+if (remittance.error) throw remittance.error;
 const { error: deliveredError } = await employee.client.rpc("update_delivery_status", {
   p_delivery_id: deliveryId,
   p_status: "delivered",
@@ -288,7 +338,7 @@ if (adjustError) throw adjustError;
 
 await expectFailure("Fresh Rescue on batch outside expiry window", () =>
   manager.client.from("fresh_rescue_deals").insert({
-    batch_id: "40000000-0000-0000-0000-000000000001",
+    batch_id: "40000000-0000-0000-0000-000000000008",
     title: "Invalid rescue",
     original_price: 25000,
     rescue_price: 20000,

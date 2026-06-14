@@ -32,7 +32,6 @@ Deno.serve(async (request) => {
       width: 512,
       margin: 2,
     });
-    await admin.from("batches").update({ qr_code: traceUrl }).eq("batch_id", batch.batch_id);
     return json(request, { batchId: batch.batch_id, batchCode: batch.batch_code, traceUrl, qrDataUrl });
   } catch (error) {
     return handleError(request, error);

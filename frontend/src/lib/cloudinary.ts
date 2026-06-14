@@ -6,7 +6,7 @@ type UploadFolder = 'products' | 'certificates' | 'deliveries' | 'avatars' | 'ch
 async function upload(file: File, folder: UploadFolder, resourceType: 'image' | 'auto') {
   const signed = await callFunction<Signature>('sign-cloudinary-upload', { folder })
   if (!signed.cloudName || signed.cloudName.startsWith('your_')) {
-    throw new Error('Cloudinary is not configured. Restart Edge Functions after setting CLOUDINARY_CLOUD_NAME in supabase/.env.local.')
+    throw new Error('Image upload is currently unavailable. Please contact an administrator.')
   }
   const form = new FormData()
   form.append('file', file)

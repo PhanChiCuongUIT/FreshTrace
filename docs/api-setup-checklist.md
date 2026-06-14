@@ -60,14 +60,20 @@ Managers call `generate-batch-qr`. Customers use `trace-batch`. Shippers use
 
 ## Fresh Assistant
 
-The MVP uses:
+The assistant can use Gemini API, with deterministic FreshTrace ranking as a
+fallback when no key is configured:
 
 ```env
-USE_AI_ASSISTANT=false
-AI_PROVIDER=rule-based
+USE_AI_ASSISTANT=true
+AI_PROVIDER=gemini
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.1-flash-lite
 ```
 
-The rule-based assistant only recommends products that exist in the database.
+`gemini-3.1-flash-lite` is the recommended free-tier/default model for the
+project. Use `gemini-3.5-flash` for stronger answers if your API tier allows it.
+The assistant still only recommends products and admin insights that exist in
+the database.
 
 ## Pre-Deployment Checks
 

@@ -32,7 +32,10 @@ Deno.serve(async (request) => {
       margin: 2,
     });
     const { error: updateError } = await admin.from("batches")
-      .update({ qr_code: traceUrl }).eq("batch_id", batchId);
+      .update({ qr_code: traceUrl })
+      .eq("batch_id", batchId)
+      .select("batch_id")
+      .single();
     if (updateError) throw updateError;
     return json(request, { batchId, batchCode: batch.batch_code, traceUrl, qrDataUrl });
   } catch (error) {

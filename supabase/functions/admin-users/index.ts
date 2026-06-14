@@ -102,7 +102,7 @@ Deno.serve(async (request) => {
     if (body.action === "update") {
       if (!body.userId) throw new HttpError(400, "userId is required");
       const current = await admin.from("users")
-        .select("user_id,auth_user_id,email,name,status,roles!inner(role_name)").eq("user_id", body.userId).single();
+        .select("user_id,auth_user_id,role_id,email,name,status,roles!inner(role_name)").eq("user_id", body.userId).single();
       if (current.error || !current.data) throw new HttpError(404, "User not found");
       const currentRole = (current.data.roles as unknown as { role_name: string }).role_name;
       const removesCurrentRole = body.role && body.role !== currentRole;
@@ -155,12 +155,26 @@ Deno.serve(async (request) => {
         .single();
       if (error || !data) throw new HttpError(404, "User not found");
       if ((body.status === "inactive" || body.status === "banned") && current.data.email) {
-        await sendMail({
-          to: current.data.email,
-          subject: body.status === "banned" ? "FreshTrace account banned" : "FreshTrace account inactive",
-          html: statusMailHtml(current.data.name, body.status, body.reason!.trim()),
-          text: `Hello ${current.data.name || "FreshTrace user"}, your FreshTrace account is now ${body.status}. Reason: ${body.reason!.trim()}`,
-        });
+        try {
+          await sendMail({
+            to: current.data.email,
+            subject: body.status === "banned" ? "FreshTrace account banned" : "FreshTrace account inactive",
+            html: statusMailHtml(current.data.name, body.status, body.reason!.trim()),
+            text: `Hello ${current.data.name || "FreshTrace user"}, your FreshTrace account is now ${body.status}. Reason: ${body.reason!.trim()}`,
+          });
+        } catch (mailError) {
+          const rollback = await admin.from("users").update({
+            status: current.data.status,
+            role_id: current.data.role_id,
+          }).eq("user_id", body.userId);
+          if (rollback.error) {
+            console.error("Could not roll back user governance update after email failure", rollback.error);
+          }
+          throw new HttpError(
+            502,
+            `Status email could not be sent; the account change was rolled back. ${mailError instanceof Error ? mailError.message : String(mailError)}`,
+          );
+        }
       }
       return json(request, { data });
     }

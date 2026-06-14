@@ -10,7 +10,11 @@ async function main() {
     password: 'FreshTrace!123',
   })
   if (auth.error) throw auth.error
-  const userId = auth.data.user.id
+  const profile = await supabase.from('users').select('user_id')
+    .eq('auth_user_id', auth.data.user.id)
+    .single()
+  if (profile.error) throw profile.error
+  const userId = profile.data.user_id
   const result = await supabase
     .from('deliveries')
     .select('delivery_id,status,proof_image_url,delivery_batch_checks(batch_id,matched,checked_at),delivery_payment_collections(method,status,remittance_status),orders(order_id,order_code,delivery_address,users(name,phone),payments(method,status),order_items(order_item_id,product_name,quantity,batches(batch_id,batch_code)))')

@@ -37,16 +37,84 @@ type AdminInsight = {
   tone?: "green" | "orange" | "red" | "blue" | "gray";
   href?: string;
 };
+type AssistantAnswerContext = {
+  role: "admin" | "customer" | "manager";
+  question: string;
+  intent: string;
+  fallback: string;
+  recommendations?: Recommendation[];
+  insights?: AdminInsight[];
+};
+
+async function enhanceWithGemini(context: AssistantAnswerContext): Promise<string> {
+  const apiKey = Deno.env.get("GEMINI_API_KEY")?.trim();
+  if (!apiKey) return context.fallback;
+  const model = Deno.env.get("GEMINI_MODEL")?.trim() || "gemini-3.1-flash-lite";
+  const payload = {
+    systemInstruction: {
+      parts: [
+        {
+          text: "You are FreshTrace Assistant. Answer concisely in the user's language when clear. Use plain text only, no Markdown, no bullet symbols, and no numbered lists. Use only the provided FreshTrace data. Do not invent products, users, reports, payments, or actions. Mention when no matching data exists.",
+        },
+      ],
+    },
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 320,
+    },
+    contents: [
+      {
+        role: "user",
+        parts: [{
+          text: JSON.stringify({
+            role: context.role,
+            question: context.question,
+            intent: context.intent,
+            fallback: context.fallback,
+            recommendations: context.recommendations?.map((item) => ({
+              name: item.name,
+              category: item.category,
+              price: item.currentPrice,
+              expireDate: item.expireDate,
+              rescue: item.isRescue,
+              certificate: item.certificate,
+            })),
+            insights: context.insights,
+          }),
+        }],
+      },
+    ],
+  };
+  try {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) return context.fallback;
+    const data = await response.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    return data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("").trim() || context.fallback;
+  } catch {
+    return context.fallback;
+  }
+}
 
 function relatedRoleName(value: unknown): string {
   if (Array.isArray(value)) return String((value[0] as { role_name?: unknown } | undefined)?.role_name ?? "role");
   return String((value as { role_name?: unknown } | null)?.role_name ?? "role");
 }
 
+function prefersVietnamese(question: string): boolean {
+  return /[ăâđêôơư]/i.test(question) ||
+    /\b(tìm|các|người dùng|báo cáo|hết hạn|giá|sản phẩm|đơn hàng|thanh toán)\b/i.test(question);
+}
+
 function detectIntent(question: string): string {
   const value = question.toLocaleLowerCase("vi");
   if (/(cheapest|lowest price|least expensive|rẻ nhất|giá thấp nhất|giá rẻ|tiền ít)/.test(value)) return "cheapest";
-  if (/(expire soon|nearest expiry|closest date|use soon|cận date|gần hết hạn|hết hạn sớm|date gần nhất|sắp hết hạn)/.test(value)) return "expiring_soon";
+  if (/(expire soon|nearest expiry|closest date|use soon|cận date|gần hết hạn|hết hạn|hạn gần nhất|date gần nhất|sắp hết hạn)/.test(value)) return "expiring_soon";
   if (/(discount|saving|promotion|rescue|budget|giảm giá|tiết kiệm|ưu đãi|khuyến mãi)/.test(value)) return "saving";
   if (/(freshest|fresh|long shelf|keep longer|long expiry|fresh longer|hạn dài|để lâu|tươi nhất|còn lâu hết hạn)/.test(value)) return "long_shelf_life";
   if (/(organic|vietgap|certified|certificate|chứng nhận|hữu cơ|an toàn)/.test(value)) return "certified";
@@ -163,17 +231,29 @@ async function adminAssistant(question: string, userId: string) {
     );
   }
 
-  const answer = insights.length
-    ? `I found ${insights.length} admin insight${insights.length === 1 ? "" : "s"} for "${intent}".`
-    : "I could not find matching admin data for that question.";
+  const fallback = prefersVietnamese(question)
+    ? insights.length
+      ? `Tôi tìm thấy ${insights.length} kết quả quản trị phù hợp với yêu cầu của bạn. Các dữ liệu chi tiết được hiển thị bên dưới.`
+      : "Tôi chưa tìm thấy dữ liệu quản trị phù hợp với câu hỏi này."
+    : insights.length
+      ? `I found ${insights.length} admin insight${insights.length === 1 ? "" : "s"} for "${intent}". Details are shown below.`
+      : "I could not find matching admin data for that question.";
+  const answer = await enhanceWithGemini({
+    role: "admin",
+    question,
+    intent: `admin:${intent}`,
+    fallback,
+    insights,
+  });
 
-  await admin.from("assistant_logs").insert({
+  const log = await admin.from("assistant_logs").insert({
     user_id: userId,
     question: question.trim(),
     answer,
     intent: `admin:${intent}`,
     recommended_product_ids: [],
   });
+  if (log.error) throw log.error;
 
   return { answer, intent: `admin:${intent}`, recommendations: [], insights };
 }
@@ -186,6 +266,7 @@ Deno.serve(async (request) => {
     const profile = await requireProfile(request, ["customer", "admin", "manager"]);
     const { question } = await readJson<Body>(request);
     if (!question || question.trim().length < 3) throw new HttpError(400, "Question is too short");
+    if (question.trim().length > 500) throw new HttpError(400, "Question cannot exceed 500 characters");
 
     if (profile.role === "admin") {
       return json(request, await adminAssistant(question, profile.userId));
@@ -232,17 +313,29 @@ Deno.serve(async (request) => {
       return b.daysRemaining - a.daysRemaining;
     }).slice(0, 5);
     const storedIntent = productType ? `${intent}:${productType.key}` : intent;
-    const answer = ranked.length
-      ? `I found ${ranked.length} matching ${productType?.key ?? "product"} options in FreshTrace. Results are ranked for the "${intent}" intent.`
-      : "No matching products are currently available. Try a broader request.";
+    const fallback = prefersVietnamese(question)
+      ? ranked.length
+        ? `Tôi tìm thấy ${ranked.length} sản phẩm phù hợp. Kết quả đã được sắp xếp theo yêu cầu và hiển thị bên dưới.`
+        : "Hiện chưa có sản phẩm phù hợp. Bạn hãy thử mô tả rộng hơn."
+      : ranked.length
+        ? `I found ${ranked.length} matching ${productType?.key ?? "product"} options in FreshTrace. Results are shown below.`
+        : "No matching products are currently available. Try a broader request.";
+    const answer = await enhanceWithGemini({
+      role: profile.role as "customer" | "manager",
+      question,
+      intent: storedIntent,
+      fallback,
+      recommendations: ranked,
+    });
 
-    await admin.from("assistant_logs").insert({
+    const log = await admin.from("assistant_logs").insert({
       user_id: profile.userId,
       question: question.trim(),
       answer,
       intent: storedIntent,
       recommended_product_ids: ranked.map((item) => item.productId),
     });
+    if (log.error) throw log.error;
     return json(request, { answer, intent: storedIntent, recommendations: ranked });
   } catch (error) {
     return handleError(request, error);

@@ -24,7 +24,8 @@
 
 ## Optional
 
-- `OPENAI_API_KEY` or `GEMINI_API_KEY` for a future AI-assisted Fresh Assistant
+- `GEMINI_API_KEY` for Fresh Assistant answer generation. The app still works without it by using deterministic FreshTrace ranking and admin insights.
+- `GEMINI_MODEL` optionally overrides the default assistant model. Recommended free-tier default: `gemini-3.1-flash-lite`. For stronger answers, use `gemini-3.5-flash` if your API tier allows it.
 
 ## Required for Real Auth Email
 

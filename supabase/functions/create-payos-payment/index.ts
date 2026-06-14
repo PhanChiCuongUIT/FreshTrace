@@ -21,7 +21,7 @@ Deno.serve(async (request) => {
 
     const admin = adminClient();
     const { data: order, error } = await admin.from("orders")
-      .select("order_id,order_code,total_amount,status,user_id,users!inner(name,email,phone),payments!inner(payment_id,method,status),deliveries(delivery_id,employee_id,status)")
+      .select("order_id,order_code,total_amount,status,user_id,users!inner(name,email,phone),payments!inner(payment_id,method,status,amount),deliveries(delivery_id,employee_id,status)")
       .eq("order_id", orderId).single();
     if (error || !order) throw new HttpError(404, "Order not found");
     const payment = Array.isArray(order.payments) ? order.payments[0] : order.payments;
@@ -31,11 +31,14 @@ Deno.serve(async (request) => {
     if (purpose === "checkout") {
       if (profile.role !== "customer" || order.user_id !== profile.userId) throw new HttpError(403, "Forbidden");
       if (payment.method !== "payos") throw new HttpError(409, "Order does not use payOS checkout");
+      if (order.status !== "pending" || payment.status !== "pending") {
+        throw new HttpError(409, "This checkout is no longer awaiting payment");
+      }
     } else if (purpose === "customer_cod") {
       if (profile.role !== "employee" || delivery?.employee_id !== profile.userId) {
         throw new HttpError(403, "Only the assigned Shipper can create the COD QR");
       }
-      if (payment.method !== "cod" || delivery.status !== "delivering") {
+      if (payment.method !== "cod" || payment.status !== "pending" || delivery.status !== "delivering") {
         throw new HttpError(409, "COD QR is only available while delivering");
       }
     } else {
@@ -45,7 +48,9 @@ Deno.serve(async (request) => {
       if (collection.error || !collection.data || collection.data.method !== "cash") {
         throw new HttpError(409, "Record a cash collection before creating a remittance");
       }
-      if (collection.data.remittance_status === "paid") throw new HttpError(409, "Cash was already remitted");
+      if (collection.data.remittance_status !== "pending" || payment.status !== "pending") {
+        throw new HttpError(409, "Cash was already remitted or the payment is closed");
+      }
     }
 
     if (payment.status === "paid" && purpose !== "shipper_remittance") {
@@ -54,7 +59,16 @@ Deno.serve(async (request) => {
     const existing = await admin.from("payos_requests")
       .select("checkout_url,qr_code,provider_order_code,status")
       .eq("payment_id", payment.payment_id).eq("purpose", purpose).eq("status", "pending").maybeSingle();
+    if (existing.error) throw existing.error;
     if (existing.data?.checkout_url) {
+      if (purpose === "checkout") {
+        const repaired = await admin.from("payments").update({
+          provider_order_code: existing.data.provider_order_code,
+          payment_url: existing.data.checkout_url,
+          qr_code: existing.data.qr_code,
+        }).eq("payment_id", payment.payment_id).select("payment_id").single();
+        if (repaired.error) throw repaired.error;
+      }
       return json(request, {
         ...existing.data,
         qrDataUrl: existing.data.qr_code
@@ -68,7 +82,7 @@ Deno.serve(async (request) => {
       ? await admin.from("delivery_payment_collections").select("collection_id").eq("delivery_id", delivery!.delivery_id).single()
       : null;
     const providerOrderCode = Date.now() * 100 + crypto.getRandomValues(new Uint8Array(1))[0];
-    const amount = Math.round(Number(order.total_amount));
+    const amount = Math.round(Number(payment.amount));
     const description = `${purpose === "shipper_remittance" ? "FTR" : purpose === "customer_cod" ? "FTC" : "FT"}${order.order_code}`.slice(0, 9);
     const payload: Record<string, unknown> = {
       orderCode: providerOrderCode,
@@ -109,14 +123,15 @@ Deno.serve(async (request) => {
       qr_code: result.data.qrCode,
       transaction_id: result.data.paymentLinkId,
       provider_payload: result,
-    });
+    }).select("request_id").single();
     if (inserted.error) throw inserted.error;
     if (purpose === "checkout") {
-      await admin.from("payments").update({
+      const paymentUpdate = await admin.from("payments").update({
         provider_order_code: providerOrderCode,
         payment_url: result.data.checkoutUrl,
         qr_code: result.data.qrCode,
-      }).eq("payment_id", payment.payment_id);
+      }).eq("payment_id", payment.payment_id).select("payment_id").single();
+      if (paymentUpdate.error) throw paymentUpdate.error;
     }
     return json(request, {
       checkoutUrl: result.data.checkoutUrl,

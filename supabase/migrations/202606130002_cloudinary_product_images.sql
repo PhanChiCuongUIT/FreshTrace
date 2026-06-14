@@ -1,0 +1,21 @@
+update public.products as product
+set image_url = image.cloudinary_url
+from (values
+  ('Baby Cucumbers', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315691/freshtrace/products/baby-cucumbers.jpg'),
+  ('Cherry Tomatoes', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263758/freshtrace/products/cherry-tomatoes.jpg'),
+  ('Dak Lak Avocado', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263759/freshtrace/products/dak-lak-avocado.jpg'),
+  ('Da Lat Carrots', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263760/freshtrace/products/da-lat-carrots.jpg'),
+  ('Da Lat Strawberries', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315698/freshtrace/products/da-lat-strawberries.jpg'),
+  ('Fresh Coriander', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781276959/freshtrace/products/fresh-coriander.jpg'),
+  ('Grass-fed Beef Tenderloin', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315706/freshtrace/products/grass-fed-beef-tenderloin.jpg'),
+  ('Green Broccoli', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263763/freshtrace/products/green-broccoli.jpg'),
+  ('Hoa Loc Mango', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263763/freshtrace/products/hoa-loc-mango.jpg'),
+  ('Nam Roi Pomelo', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263765/freshtrace/products/nam-roi-pomelo.jpg'),
+  ('Oyster Mushrooms', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263768/freshtrace/products/oyster-mushrooms.png'),
+  ('Purple Sweet Potato', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315735/freshtrace/products/purple-sweet-potato.jpg'),
+  ('Seedless Guava', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263769/freshtrace/products/seedless-guava.jpg'),
+  ('ST25 Brown Rice', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263770/freshtrace/products/st25-brown-rice.jpg'),
+  ('Sweet Basil', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263771/freshtrace/products/sweet-basil.jpg'),
+  ('VietGAP Spinach', 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263772/freshtrace/products/vietgap-spinach.jpg')
+) as image(product_name, cloudinary_url)
+where product.name = image.product_name;

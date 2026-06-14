@@ -10,8 +10,10 @@ $secrets = @{
   PAYOS_CHECKSUM_KEY = "your_payos_checksum_key"
   PAYOS_RETURN_URL = "https://your-domain.com/payment/success"
   PAYOS_CANCEL_URL = "https://your-domain.com/payment/cancel"
-  USE_AI_ASSISTANT = "false"
-  AI_PROVIDER = "rule-based"
+  USE_AI_ASSISTANT = "true"
+  AI_PROVIDER = "gemini"
+  GEMINI_API_KEY = "your_gemini_api_key"
+  GEMINI_MODEL = "gemini-3.1-flash-lite"
   QR_TRACE_BASE_URL = "https://your-domain.com/trace"
 }
 

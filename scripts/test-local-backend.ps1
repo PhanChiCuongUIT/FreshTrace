@@ -15,3 +15,12 @@ if ($LASTEXITCODE -ne 0) { throw "Smoke test failed." }
 
 npx deno run --allow-net scripts/backend-integration-test.ts $values["API_URL"] $values["ANON_KEY"] $values["SERVICE_ROLE_KEY"]
 if ($LASTEXITCODE -ne 0) { throw "Backend integration test failed." }
+
+npx deno run --allow-net scripts/catalog-crud-test.ts $values["API_URL"] $values["ANON_KEY"] $values["SERVICE_ROLE_KEY"]
+if ($LASTEXITCODE -ne 0) { throw "Catalog CRUD integration test failed." }
+
+npx deno run --allow-net scripts/non-manager-crud-test.ts $values["API_URL"] $values["ANON_KEY"] $values["SERVICE_ROLE_KEY"]
+if ($LASTEXITCODE -ne 0) { throw "Non-manager CRUD integration test failed." }
+
+npx deno run --allow-net scripts/coupon-lifecycle-test.ts $values["API_URL"] $values["ANON_KEY"] $values["SERVICE_ROLE_KEY"]
+if ($LASTEXITCODE -ne 0) { throw "Coupon lifecycle integration test failed." }

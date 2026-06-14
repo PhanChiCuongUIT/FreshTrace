@@ -9,9 +9,16 @@ import { supabase } from '../../lib/supabase'
 import type { CatalogProduct } from '../../lib/types'
 import { useAuth } from '../auth/auth-context'
 import { useFeedback } from '../../components/Feedback'
+import { ProductImage } from '../../components/ProductImage'
 
 type CartItem = { cart_item_id: string; batch_id: string; quantity: number; note: string | null; products: { name: string; unit: string; image_url: string | null } }
 type Coupon = { coupon_id: string; code: string; coupon_type: string; amount: number; remaining_amount: number; discount_percent: number | null; max_discount_amount: number | null; min_order_amount: number; expires_at: string | null; description: string | null }
+
+function couponOptionLabel(coupon: Coupon) {
+  if (coupon.coupon_type === 'free_shipping') return 'Free shipping'
+  if (coupon.coupon_type === 'percent') return `${coupon.discount_percent ?? 0}% off / cap ${currency.format(coupon.remaining_amount)}`
+  return currency.format(coupon.remaining_amount)
+}
 
 export function CartPage() {
   const { profile } = useAuth()
@@ -38,6 +45,7 @@ export function CartPage() {
   })
   const total = useMemo(() => cart.data?.reduce((sum, item) => sum + item.price * item.quantity, 0) ?? 0, [cart.data])
   const coupons = useQuery({ queryKey: ['checkout-coupons', profile?.user_id], queryFn: async () => {
+    await supabase.rpc('refresh_coupon_statuses')
     const result = await supabase.from('coupons').select('coupon_id,code,coupon_type,amount,remaining_amount,discount_percent,max_discount_amount,min_order_amount,expires_at,description').eq('user_id', profile!.user_id).eq('status', 'active').gt('remaining_amount', 0).order('created_at', { ascending: false })
     if (result.error) throw result.error
     return result.data as Coupon[]
@@ -53,12 +61,17 @@ export function CartPage() {
     : 0
   const update = async (id: string, quantity: number) => {
     if (quantity < 1 && !await confirm({ title: 'Remove this product?', description: 'The product and its shopping note will be removed from your cart.', confirmLabel: 'Remove', danger: true })) return
-    const result = quantity < 1 ? await supabase.from('cart_items').delete().eq('cart_item_id', id) : await supabase.from('cart_items').update({ quantity }).eq('cart_item_id', id)
+    const result = quantity < 1
+      ? await supabase.from('cart_items').delete().eq('cart_item_id', id).select('cart_item_id').single()
+      : await supabase.from('cart_items').update({ quantity }).eq('cart_item_id', id).select('cart_item_id').single()
     if (result.error) toast(result.error.message, 'error')
     else { await client.invalidateQueries({ queryKey: ['cart'] }); toast(quantity < 1 ? 'Product removed from cart' : 'Cart quantity updated') }
   }
   const updateNote = async (id: string, note: string) => {
-    const result = await supabase.from('cart_items').update({ note: note || null }).eq('cart_item_id', id)
+    const result = await supabase.from('cart_items').update({ note: note.trim() || null })
+      .eq('cart_item_id', id)
+      .select('cart_item_id')
+      .single()
     if (result.error) toast(result.error.message, 'error')
   }
   const checkout = useMutation({
@@ -93,13 +106,13 @@ export function CartPage() {
     {!cart.data?.length ? <div className="mt-6"><EmptyState title="Your cart is empty">Add an available batch from the marketplace.</EmptyState></div> :
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-3">{cart.data.map(item => <div key={item.cart_item_id} className="card grid gap-4 p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center">
-          <div className="h-16 w-16 overflow-hidden rounded-xl bg-brand-50">{item.products.image_url && <img src={item.products.image_url} alt="" className="h-full w-full object-cover" />}</div>
+          <div className="h-16 w-16 overflow-hidden rounded-xl bg-brand-50"><ProductImage name={item.products.name} source={item.products.image_url} className="h-full w-full object-cover"/></div>
           <div className="min-w-0"><h2 className="font-bold">{item.products.name}</h2><p className="text-sm text-black/50">{currency.format(item.price)} / {item.products.unit}</p><input className="mt-2 w-full rounded-lg border border-black/10 px-3 py-2 text-sm" defaultValue={item.note ?? ''} onBlur={event => updateNote(item.cart_item_id, event.target.value)} placeholder="Shopping note, ripeness, replacement..."/></div>
           <div className="flex items-center gap-2"><button className="btn-secondary p-2" onClick={() => update(item.cart_item_id, item.quantity - 1)}><Minus size={15}/></button><b>{item.quantity}</b><button className="btn-secondary p-2" onClick={() => update(item.cart_item_id, item.quantity + 1)}><Plus size={15}/></button><button className="p-2 text-red-600" onClick={() => update(item.cart_item_id, 0)}><Trash2 size={17}/></button></div>
         </div>)}</div>
         <form className="card h-fit space-y-4 p-5" onSubmit={event => { event.preventDefault(); checkout.mutate() }}>
           <h2 className="text-xl font-black">Order summary</h2><div className="flex justify-between"><span>Subtotal</span><b>{currency.format(total)}</b></div><div className="flex justify-between"><span>Delivery fee</span><b>{currency.format(deliveryFee)}</b></div>{discount > 0 && <div className="flex justify-between text-green-700"><span>Coupon discount</span><b>-{currency.format(discount)}</b></div>}<div className="flex justify-between border-t pt-4 text-lg"><span>Total</span><b>{currency.format(total + deliveryFee - discount)}</b></div>
-          <label className="block text-sm font-semibold">Coupon<select className="input mt-1" value={couponCode} onChange={event => setCouponCode(event.target.value)}><option value="">No coupon</option>{coupons.data?.map(coupon => <option key={coupon.coupon_id} value={coupon.code} disabled={total < Number(coupon.min_order_amount)}>{coupon.code} / {coupon.coupon_type === 'free_shipping' ? 'Free shipping' : currency.format(coupon.remaining_amount)}{Number(coupon.min_order_amount) > 0 ? ` / min ${currency.format(coupon.min_order_amount)}` : ''}</option>)}</select></label>
+          <label className="block text-sm font-semibold">Coupon<select className="input mt-1" value={couponCode} onChange={event => setCouponCode(event.target.value)}><option value="">No coupon</option>{coupons.data?.map(coupon => <option key={coupon.coupon_id} value={coupon.code} disabled={total < Number(coupon.min_order_amount)}>{coupon.code} / {couponOptionLabel(coupon)}{Number(coupon.min_order_amount) > 0 ? ` / min ${currency.format(coupon.min_order_amount)}` : ''}</option>)}</select></label>
           <label className="block text-sm font-semibold">Delivery address<input className="input mt-1" required value={address} onChange={event => setAddress(event.target.value)} /></label>
           <label className="block text-sm font-semibold">Payment<select className="input mt-1" value={method} onChange={event => setMethod(event.target.value as 'cod' | 'payos')}><option value="cod">Cash on delivery</option><option value="payos">payOS</option></select></label>
           <label className="block text-sm font-semibold">Order note<textarea className="input mt-1" rows={3} value={orderNote} onChange={event => setOrderNote(event.target.value)} placeholder="Delivery time or general instructions"/></label>

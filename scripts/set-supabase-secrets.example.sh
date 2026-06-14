@@ -19,12 +19,10 @@ supabase secrets set \
   PAYOS_RETURN_URL="http://localhost:5173/payment/success" \
   PAYOS_CANCEL_URL="http://localhost:5173/payment/cancel" \
   PAYOS_WEBHOOK_URL="http://localhost:55421/functions/v1/payos-webhook" \
-  USE_AI_ASSISTANT="false" \
-  AI_PROVIDER="rule-based" \
+  USE_AI_ASSISTANT="true" \
+  AI_PROVIDER="gemini" \
   GEMINI_API_KEY="your_gemini_api_key" \
-  GEMINI_MODEL="gemini-2.0-flash" \
-  OPENAI_API_KEY="your_openai_api_key" \
-  OPENAI_MODEL="gpt-4.1-mini" \
+  GEMINI_MODEL="gemini-3.1-flash-lite" \
   QR_TRACE_BASE_URL="http://localhost:5173/trace" \
   QR_BATCH_PREFIX="FRESHTRACE-BATCH" \
   EDGE_FUNCTION_SECRET="change_this_random_32_chars_or_more" \
