@@ -59,12 +59,16 @@ Production URLs should be:
 
 ```env
 APP_URL=https://freshtrace-app.vercel.app
-ALLOWED_ORIGINS=https://freshtrace-app.vercel.app
+ALLOWED_ORIGINS=https://freshtrace-app.vercel.app,https://freshtrace.online,https://www.freshtrace.online
 PAYOS_RETURN_URL=https://freshtrace-app.vercel.app/payment/success
 PAYOS_CANCEL_URL=https://freshtrace-app.vercel.app/payment/cancel
 PAYOS_WEBHOOK_URL=https://puwfoxlvjzudypbxtrnr.supabase.co/functions/v1/payos-webhook
 QR_TRACE_BASE_URL=https://freshtrace-app.vercel.app/trace
 ```
+
+If you switch the public app from the Vercel URL to `freshtrace.online`, update
+`APP_URL`, payOS return/cancel URLs, QR trace base URL, Vercel `VITE_SITE_URL`,
+Supabase Auth Site URL, and Redirect URLs together.
 
 Do not commit `supabase-secrets.production.env`.
 
@@ -252,6 +256,17 @@ dist
 
 Add the browser-safe variables from `.env.production` to Vercel. Never add service-role, payOS secret, Cloudinary secret, SMTP password, or Gemini key to Vercel.
 
+If Assistant or any Edge Function shows `TypeError: Failed to fetch` on
+production but works locally, check these first:
+
+- Vercel `VITE_API_BASE_URL` must be
+  `https://puwfoxlvjzudypbxtrnr.supabase.co/functions/v1`.
+- `ALLOWED_ORIGINS` in Supabase Edge Function secrets must include the exact
+  domain opened in the browser.
+- After changing Vercel env vars, redeploy Vercel.
+- After changing `supabase-secrets.production.env`, rerun
+  `scripts/deploy-production.ps1 -SkipDbPush -SkipFunctions`.
+
 The frontend includes `frontend/vercel.json` so Vercel rewrites direct links such
 as `/auth/confirm`, `/reset-password`, `/orders/...`, and `/trace/...` to
 `index.html`.
@@ -264,10 +279,34 @@ Set webhook URL:
 https://puwfoxlvjzudypbxtrnr.supabase.co/functions/v1/payos-webhook
 ```
 
-In the payOS dashboard, open the project/store/application that owns your
-`PAYOS_CLIENT_ID`, then find the webhook or callback URL settings. The exact
-label can vary by dashboard version, but it is the setting used for payment
-status notifications. Paste the URL above there.
+In the Vietnamese payOS dashboard, do not use `Thiết lập -> Logs`; that page only
+shows delivery attempts and the `Chưa cấu hình URL` status. Open `Tích hợp` from
+the left sidebar, then open the webhook/callback configuration for the payment
+channel that owns your `PAYOS_CLIENT_ID`. The exact label can vary by dashboard
+version, but it is usually the setting for `Webhook URL`, `URL nhận kết quả
+thanh toán`, or `Callback URL`. Paste the URL above there.
+
+If the dashboard still does not show an editable webhook field, use the payOS
+support/help channel and ask them to enable or set the webhook/callback URL for
+your merchant account. The code side is already ready because `payos-webhook` is
+deployed with `verify_jwt = false` and validates payOS signatures internally.
+
+### payOS without webhook access
+
+If payOS requires partner approval before enabling webhooks, FreshTrace can still
+work for the defense/demo flow:
+
+1. Customer or Shipper opens the payOS checkout link/QR.
+2. payOS redirects the browser back to `/payment/success` after payment.
+3. FreshTrace calls `sync-payos-payment`, which reads the payment link status
+   from payOS API `GET /v2/payment-requests/{id}` and confirms the matching
+   local payment when payOS reports `PAID`.
+4. On the Shipper mobile screen, the payOS QR dialog also has `Check payOS
+   status` for COD direct-transfer/remittance cases.
+
+Webhook remains the best production option because it updates payments without a
+user returning to the app, but the sync fallback is enough for demo production
+and for accounts where webhook configuration is not available yet.
 
 Return URL:
 

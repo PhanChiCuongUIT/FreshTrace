@@ -305,7 +305,7 @@ async function ensureCompletedDeliveryState(
   }
 
   const checks = await admin.from("delivery_batch_checks")
-    .select("id")
+    .select("check_id")
     .eq("delivery_id", deliveryId)
     .eq("batch_id", batchId)
     .eq("matched", true)

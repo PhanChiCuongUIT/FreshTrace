@@ -71,6 +71,9 @@ Deno.serve(async (request) => {
       }
       return json(request, {
         ...existing.data,
+        providerOrderCode: existing.data.provider_order_code,
+        checkoutUrl: existing.data.checkout_url,
+        qrCode: existing.data.qr_code,
         qrDataUrl: existing.data.qr_code
           ? await QRCode.toDataURL(existing.data.qr_code, { width: 420, margin: 2 })
           : null,

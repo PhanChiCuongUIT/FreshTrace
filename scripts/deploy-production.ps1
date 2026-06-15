@@ -126,6 +126,7 @@ if (-not $SkipFunctions) {
     "record-delivery-payment",
     "render-batch-qr",
     "sign-cloudinary-upload",
+    "sync-payos-payment",
     "trace-batch",
     "update-delivery-status",
     "verify-delivery-batch"

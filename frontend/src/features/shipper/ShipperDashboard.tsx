@@ -37,7 +37,7 @@ export function ShipperDashboard() {
   const { profile } = useAuth()
   const client = useQueryClient()
   const { confirm, prompt: askText, toast } = useFeedback()
-  const [paymentQr, setPaymentQr] = useState<{ deliveryId: string; title: string; qrDataUrl: string; checkoutUrl: string } | null>(null)
+  const [paymentQr, setPaymentQr] = useState<{ deliveryId: string; title: string; qrDataUrl: string; checkoutUrl: string; providerOrderCode: number } | null>(null)
   const [statusFilter, setStatusFilter] = useState('')
   const [query, setQuery] = useState('')
   const deliveries = useQuery({ queryKey: ['shipper-deliveries', profile?.user_id], enabled: Boolean(profile?.user_id), queryFn: async () => {
@@ -89,13 +89,27 @@ export function ShipperDashboard() {
     try {
       const order = one(delivery.orders)
       if (!order) throw new Error('Order is unavailable')
-      const payment = await callFunction<{ checkoutUrl: string; qrDataUrl: string }>('create-payos-payment', { orderId: order.order_id, purpose })
+      const payment = await callFunction<{ checkoutUrl: string; qrDataUrl: string; providerOrderCode: number }>('create-payos-payment', { orderId: order.order_id, purpose })
       setPaymentQr({
         deliveryId: delivery.delivery_id,
         title: purpose === 'customer_cod' ? 'Customer scans to pay COD' : 'Shipper scans to remit collected cash',
         qrDataUrl: payment.qrDataUrl,
         checkoutUrl: payment.checkoutUrl,
+        providerOrderCode: payment.providerOrderCode,
       })
+    } catch (error) { toast(messageOf(error), 'error') }
+  }
+  const syncPaymentQr = async () => {
+    if (!paymentQr) return
+    try {
+      const result = await callFunction<{ status: string; providerStatus?: string }>('sync-payos-payment', { providerOrderCode: paymentQr.providerOrderCode })
+      await client.invalidateQueries({ queryKey: ['shipper-deliveries'] })
+      if (result.status === 'paid') {
+        toast('payOS payment confirmed')
+        setPaymentQr(null)
+      } else {
+        toast(`payOS status: ${result.providerStatus ?? result.status}`)
+      }
     } catch (error) { toast(messageOf(error), 'error') }
   }
   if (!profile) return <LoadingState label="Loading shipper profile..." />
@@ -120,5 +134,5 @@ export function ShipperDashboard() {
       {delivery.status === 'delivered' && <div className="rounded-xl bg-blue-50 p-3 text-xs font-semibold leading-5 text-blue-800">Delivered is final for the shipper workflow. If the customer says the order was not received, the customer should submit Report issue from Orders; Admin/Manager will review the report, chat history and delivery timeline.</div>}
       {!['delivered','failed'].includes(delivery.status) && <button className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold text-red-600 hover:bg-red-50" onClick={() => updateStatus(delivery, 'failed')}><TriangleAlert size={18}/> Mark delivery failed</button>}
     </div>
-  </article> })}</div>{paymentQr && <div className="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4"><div className="card w-full max-w-sm p-5 text-center"><h2 className="text-xl font-black">{paymentQr.title}</h2><p className="mt-2 text-sm text-black/55">Keep this screen open until payOS confirms the transaction.</p><img src={paymentQr.qrDataUrl} alt="payOS payment QR" className="mx-auto mt-4 w-full max-w-[300px] rounded-2xl"/><a href={paymentQr.checkoutUrl} target="_blank" rel="noreferrer" className="btn-secondary mt-4 w-full">Open payment link</a><button className="btn-primary mt-2 w-full" onClick={() => { setPaymentQr(null); client.invalidateQueries({ queryKey: ['shipper-deliveries'] }) }}>Close and refresh</button></div></div>}</div>
+  </article> })}</div>{paymentQr && <div className="fixed inset-0 z-[90] grid place-items-center bg-black/70 p-4"><div className="card w-full max-w-sm p-5 text-center"><h2 className="text-xl font-black">{paymentQr.title}</h2><p className="mt-2 text-sm text-black/55">After payment, press Check payOS status if webhook is not available.</p><img src={paymentQr.qrDataUrl} alt="payOS payment QR" className="mx-auto mt-4 w-full max-w-[300px] rounded-2xl"/><a href={paymentQr.checkoutUrl} target="_blank" rel="noreferrer" className="btn-secondary mt-4 w-full">Open payment link</a><button className="btn-primary mt-2 w-full" onClick={syncPaymentQr}>Check payOS status</button><button className="btn-secondary mt-2 w-full" onClick={() => { setPaymentQr(null); client.invalidateQueries({ queryKey: ['shipper-deliveries'] }) }}>Close and refresh</button></div></div>}</div>
 }
