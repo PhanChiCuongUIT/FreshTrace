@@ -5,6 +5,7 @@ type MailOptions = {
   subject: string;
   html: string;
   text?: string;
+  replyTo?: string;
 };
 
 const encoder = new TextEncoder();
@@ -101,6 +102,7 @@ export async function sendMail(options: MailOptions) {
   const message = [
     `From: ${from}`,
     `To: ${safeHeader(options.to)}`,
+    ...(options.replyTo ? [`Reply-To: ${safeHeader(options.replyTo)}`] : []),
     `Subject: ${safeHeader(options.subject)}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/alternative; boundary="${boundary}"`,

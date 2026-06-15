@@ -32,13 +32,31 @@ function escapeHtml(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }
 
-function statusMailHtml(name: string, status: "inactive" | "banned", reason: string) {
+function formatContact(name: string | null | undefined, email: string | null | undefined) {
+  const safeName = (name || "FreshTrace Admin").trim();
+  const safeEmail = (email || "").trim();
+  return safeEmail ? `${safeName} <${safeEmail}>` : safeName;
+}
+
+function statusMailHtml(
+  name: string,
+  status: "inactive" | "banned",
+  reason: string,
+  actor: { name: string | null; email: string | null },
+  supportEmail: string,
+) {
   const title = status === "banned" ? "Your FreshTrace account has been banned" : "Your FreshTrace account has been set to inactive";
   const description = status === "banned"
     ? "This action is permanent. The account cannot be restored to active or inactive status."
-    : "Your account is temporarily inactive. Please contact the FreshTrace admin email if you believe this should be reactivated.";
+    : "Your account is temporarily inactive. Please reply to the admin below to request reactivation if you believe this should be reviewed.";
   const safeName = escapeHtml(name || "FreshTrace user");
   const safeReason = escapeHtml(reason);
+  const safeActor = escapeHtml(formatContact(actor.name, actor.email));
+  const safeActorEmail = escapeHtml(actor.email || supportEmail);
+  const safeSupportEmail = escapeHtml(supportEmail);
+  const contactAction = status === "inactive"
+    ? "to request reactivation"
+    : "if you need clarification or want to appeal this decision";
   return `<!doctype html><html><body style="margin:0;background:#f6faf3;font-family:Arial,sans-serif;color:#17301f">
     <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6faf3;padding:28px">
       <tr><td align="center">
@@ -53,6 +71,12 @@ function statusMailHtml(name: string, status: "inactive" | "banned", reason: str
               <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0f6b45">Admin reason</p>
               <p style="margin:0;font-size:15px;line-height:1.6">${safeReason}</p>
             </div>
+            <div style="border:1px solid #d9eadf;border-radius:16px;background:#fff;padding:16px;margin-top:16px">
+              <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0f6b45">Admin contact</p>
+              <p style="margin:0 0 10px;font-size:15px;line-height:1.6">This account action was performed by: <strong>${safeActor}</strong>.</p>
+              <p style="margin:0;font-size:15px;line-height:1.6">Please reply to this email or contact <a href="mailto:${safeActorEmail}" style="color:#0f6b45;font-weight:700">${safeActorEmail}</a> ${contactAction}.</p>
+            </div>
+            <p style="font-size:14px;line-height:1.6;color:#657066;margin:18px 0 0">For additional support, contact <a href="mailto:${safeSupportEmail}" style="color:#0f6b45;font-weight:700">${safeSupportEmail}</a>.</p>
             <p style="font-size:13px;line-height:1.6;color:#657066;margin:22px 0 0">FreshTrace Governance Team</p>
           </td></tr>
         </table>
@@ -156,11 +180,29 @@ Deno.serve(async (request) => {
       if (error || !data) throw new HttpError(404, "User not found");
       if ((body.status === "inactive" || body.status === "banned") && current.data.email) {
         try {
+          const actorProfile = await admin.from("users")
+            .select("name,email")
+            .eq("user_id", actor.userId)
+            .single();
+          if (actorProfile.error || !actorProfile.data) {
+            throw new HttpError(404, "Acting admin profile was not found");
+          }
+          const supportEmail = Deno.env.get("SUPPORT_EMAIL")?.trim()
+            || Deno.env.get("SMTP_ADMIN_EMAIL")?.trim()
+            || actorProfile.data.email
+            || "support@freshtrace.online";
+          const replyTo = actorProfile.data.email || supportEmail;
+          const actorContact = formatContact(actorProfile.data.name, actorProfile.data.email);
+          const statusText = body.status === "banned" ? "banned" : "inactive";
+          const contactAction = body.status === "inactive"
+            ? "to request reactivation"
+            : "if you need clarification or want to appeal this decision";
           await sendMail({
             to: current.data.email,
             subject: body.status === "banned" ? "FreshTrace account banned" : "FreshTrace account inactive",
-            html: statusMailHtml(current.data.name, body.status, body.reason!.trim()),
-            text: `Hello ${current.data.name || "FreshTrace user"}, your FreshTrace account is now ${body.status}. Reason: ${body.reason!.trim()}`,
+            html: statusMailHtml(current.data.name, body.status, body.reason!.trim(), actorProfile.data, supportEmail),
+            text: `Hello ${current.data.name || "FreshTrace user"}, your FreshTrace account is now ${statusText}. Reason: ${body.reason!.trim()}. This account action was performed by: ${actorContact}. Please reply to this admin ${contactAction}. For additional support, contact ${supportEmail}.`,
+            replyTo,
           });
         } catch (mailError) {
           const rollback = await admin.from("users").update({

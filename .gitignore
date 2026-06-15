@@ -5,6 +5,9 @@
 !.env.production.example
 !supabase/.env.local.example
 !supabase-secrets.example.env
+supabase-secrets*.env
+!supabase-secrets.example.env
+!supabase-secrets.production.example.env
 !frontend/.env.example
 
 # Dependencies and builds

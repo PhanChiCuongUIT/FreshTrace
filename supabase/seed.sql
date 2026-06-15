@@ -209,22 +209,22 @@ on conflict do nothing;
 update public.products as product
 set image_url = images.image_url
 from (values
-  ('30000000-0000-0000-0000-000000000001'::uuid, 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000002'::uuid, 'https://images.unsplash.com/photo-1447175008436-054170c2e979?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000003'::uuid, 'https://images.unsplash.com/photo-1553279768-865429fa0078?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000004'::uuid, 'https://images.unsplash.com/photo-1536511132770-e5058c7e8c46?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000005'::uuid, 'https://images.unsplash.com/photo-1504545102780-26774c1bb073?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000006'::uuid, 'https://images.unsplash.com/photo-1618375569909-3c8616cf7733?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000007'::uuid, 'https://images.unsplash.com/photo-1546094096-0df4bcaaa337?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000008'::uuid, 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000009'::uuid, 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000010'::uuid, 'https://images.unsplash.com/photo-1464965911861-746a04b4bca6?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000011'::uuid, 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?auto=format&fit=crop&w=900&q=80'),
-  ('30000000-0000-0000-0000-000000000012'::uuid, 'https://images.unsplash.com/photo-1604977042946-1eecc30f269e?auto=format&fit=crop&w=900&q=80')
-  ,('30000000-0000-0000-0000-000000000013'::uuid, 'https://images.unsplash.com/photo-1596097635121-14b63b7a0c19?auto=format&fit=crop&w=900&q=80')
-  ,('30000000-0000-0000-0000-000000000014'::uuid, 'https://images.unsplash.com/photo-1588879460618-9249e7d947d1?auto=format&fit=crop&w=900&q=80')
-  ,('30000000-0000-0000-0000-000000000015'::uuid, 'https://images.unsplash.com/photo-1577234286642-fc512a5f8f11?auto=format&fit=crop&w=900&q=80')
-  ,('30000000-0000-0000-0000-000000000016'::uuid, 'https://images.unsplash.com/photo-1603048297172-c92544798d5a?auto=format&fit=crop&w=900&q=80')
+  ('30000000-0000-0000-0000-000000000001'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263772/freshtrace/products/vietgap-spinach.jpg'),
+  ('30000000-0000-0000-0000-000000000002'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263760/freshtrace/products/da-lat-carrots.jpg'),
+  ('30000000-0000-0000-0000-000000000003'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263763/freshtrace/products/hoa-loc-mango.jpg'),
+  ('30000000-0000-0000-0000-000000000004'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263769/freshtrace/products/seedless-guava.jpg'),
+  ('30000000-0000-0000-0000-000000000005'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263768/freshtrace/products/oyster-mushrooms.png'),
+  ('30000000-0000-0000-0000-000000000006'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263771/freshtrace/products/sweet-basil.jpg'),
+  ('30000000-0000-0000-0000-000000000007'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263758/freshtrace/products/cherry-tomatoes.jpg'),
+  ('30000000-0000-0000-0000-000000000008'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263770/freshtrace/products/st25-brown-rice.jpg'),
+  ('30000000-0000-0000-0000-000000000009'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263759/freshtrace/products/dak-lak-avocado.jpg'),
+  ('30000000-0000-0000-0000-000000000010'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315698/freshtrace/products/da-lat-strawberries.jpg'),
+  ('30000000-0000-0000-0000-000000000011'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263763/freshtrace/products/green-broccoli.jpg'),
+  ('30000000-0000-0000-0000-000000000012'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315691/freshtrace/products/baby-cucumbers.jpg'),
+  ('30000000-0000-0000-0000-000000000013'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315735/freshtrace/products/purple-sweet-potato.jpg'),
+  ('30000000-0000-0000-0000-000000000014'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781276959/freshtrace/products/fresh-coriander.jpg'),
+  ('30000000-0000-0000-0000-000000000015'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263765/freshtrace/products/nam-roi-pomelo.jpg'),
+  ('30000000-0000-0000-0000-000000000016'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315706/freshtrace/products/grass-fed-beef-tenderloin.jpg')
 ) as images(product_id, image_url)
 where product.product_id = images.product_id;
 

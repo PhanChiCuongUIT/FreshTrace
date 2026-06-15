@@ -10,6 +10,26 @@ on conflict(category_id) do update set
   description = excluded.description,
   status = excluded.status;
 
+insert into public.suppliers(
+  supplier_id, name, address, certificate, status, description, approved_at
+)
+values(
+  '20000000-0000-0000-0000-000000000004',
+  'Central Highlands Clean Farm',
+  'Pleiku, Gia Lai',
+  'VietGAP-GL-2026',
+  'approved',
+  'Certified vegetables, herbs, and chilled traceable meat from the Central Highlands.',
+  now()
+)
+on conflict(supplier_id) do update set
+  name = excluded.name,
+  address = excluded.address,
+  certificate = excluded.certificate,
+  status = excluded.status,
+  description = excluded.description,
+  approved_at = coalesce(public.suppliers.approved_at, excluded.approved_at);
+
 insert into public.products(
   product_id, category_id, supplier_id, name, description, unit,
   image_url, certificate, status
@@ -21,7 +41,7 @@ values(
   'Grass-fed Beef Tenderloin',
   'Chilled grass-fed beef with farm and batch traceability.',
   'kg',
-  'https://images.unsplash.com/photo-1603048297172-c92544798d5a?auto=format&fit=crop&w=900&q=80',
+  'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315706/freshtrace/products/grass-fed-beef-tenderloin.jpg',
   'VietGAHP',
   'active'
 )

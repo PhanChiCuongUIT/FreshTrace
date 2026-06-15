@@ -34,6 +34,7 @@
 - `SMTP_PASS`
 - `SMTP_ADMIN_EMAIL`
 - `SMTP_SENDER_NAME`
+- `SUPPORT_EMAIL`
 
 For Gmail, enable 2-Step Verification and create an App Password. Use that app
 password as `SMTP_PASS`; do not use your normal Gmail password.
@@ -66,6 +67,7 @@ Put private integration credentials in `supabase/.env.local`:
 - `SMTP_PASS`
 - `SMTP_ADMIN_EMAIL`
 - `SMTP_SENDER_NAME`
+- `SUPPORT_EMAIL`
 
 The root `.env` is retained for reference but is not loaded by the current frontend
 or Edge Function commands.

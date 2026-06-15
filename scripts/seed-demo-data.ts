@@ -23,6 +23,13 @@ type SignedInUser = DemoUser & {
   userId: string;
   client: SupabaseClient;
 };
+type DeliveryCollectionSeedRow = {
+  collection_id: string;
+  payment_id: string;
+  amount: number;
+  remittance_status: string;
+  payments: { status: string } | Array<{ status: string }> | null;
+};
 
 const demoUsers: DemoUser[] = [
   {
@@ -79,6 +86,7 @@ const demoUsers: DemoUser[] = [
 const admin = createClient(baseUrl, secretKey, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+let demoProviderOrderCode = Date.now() * 1000;
 
 const retainedEmails = new Set(demoUsers.map((user) => user.email));
 const legacyDemoEmails = [
@@ -191,6 +199,162 @@ async function createPendingOrder(
   return order.data as string;
 }
 
+async function ensureDemoPayosRemittance(deliveryId: string, shipper: SignedInUser) {
+  const collection = await admin.from("delivery_payment_collections")
+    .select("collection_id,payment_id,amount,remittance_status,payments(status)")
+    .eq("delivery_id", deliveryId)
+    .maybeSingle();
+  if (collection.error) throw collection.error;
+
+  const collectionData = collection.data as DeliveryCollectionSeedRow | null;
+  const payment = Array.isArray(collectionData?.payments)
+    ? collectionData?.payments[0] ?? null
+    : collectionData?.payments ?? null;
+  if (collectionData?.remittance_status === "paid" || payment?.status === "paid") return;
+
+  let activeCollection: DeliveryCollectionSeedRow | null = collectionData;
+  if (!activeCollection) {
+    const collected = await shipper.client.rpc("record_delivery_collection", {
+      p_delivery_id: deliveryId,
+      p_method: "cash",
+      p_proof_url: null,
+    });
+    if (collected.error) throw collected.error;
+
+    const refreshed = await admin.from("delivery_payment_collections")
+      .select("collection_id,payment_id,amount,remittance_status,payments(status)")
+      .eq("delivery_id", deliveryId)
+      .single();
+    if (refreshed.error) throw refreshed.error;
+    activeCollection = refreshed.data as DeliveryCollectionSeedRow;
+  }
+  if (!activeCollection) throw new Error("Cash collection was not created");
+
+  const providerOrderCode = ++demoProviderOrderCode;
+  const remittanceRequest = await admin.from("payos_requests").insert({
+    payment_id: activeCollection.payment_id,
+    delivery_id: deliveryId,
+    collection_id: activeCollection.collection_id,
+    purpose: "shipper_remittance",
+    requested_by: shipper.userId,
+    provider_order_code: providerOrderCode,
+    amount: activeCollection.amount,
+    checkout_url: `https://pay.freshtrace.local/remittance/${providerOrderCode}`,
+    qr_code: `FRESHTRACE-DEMO-REMITTANCE-${providerOrderCode}`,
+    status: "pending",
+    provider_payload: { source: "FreshTrace demo seed", purpose: "shipper_remittance" },
+  });
+  if (remittanceRequest.error) throw remittanceRequest.error;
+
+  const remittance = await admin.rpc("confirm_payos_request", {
+    p_provider_order_code: providerOrderCode,
+    p_amount: activeCollection.amount,
+    p_transaction_id: `demo-remittance-${providerOrderCode}`,
+    p_payload: { source: "FreshTrace demo seed", purpose: "shipper_remittance" },
+  });
+  if (remittance.error) throw remittance.error;
+}
+
+async function ensureCompletedDeliveryState(
+  orderId: string,
+  manager: SignedInUser,
+  shipper: SignedInUser,
+  batchId: string,
+) {
+  const order = await admin.from("orders")
+    .select("order_id,status,payments(status,method)")
+    .eq("order_id", orderId)
+    .single();
+  if (order.error) throw order.error;
+  if (order.data.status === "completed") return orderId;
+
+  if (order.data.status === "pending") {
+    const confirmed = await manager.client.rpc("confirm_order", { p_order_id: orderId });
+    if (confirmed.error) throw confirmed.error;
+  }
+
+  const afterConfirm = await admin.from("orders")
+    .select("status")
+    .eq("order_id", orderId)
+    .single();
+  if (afterConfirm.error) throw afterConfirm.error;
+  if (afterConfirm.data.status === "confirmed") {
+    const preparing = await manager.client.rpc("mark_order_preparing", { p_order_id: orderId });
+    if (preparing.error) throw preparing.error;
+  }
+
+  let delivery = await admin.from("deliveries")
+    .select("delivery_id,status,employee_id")
+    .eq("order_id", orderId)
+    .maybeSingle();
+  if (delivery.error) throw delivery.error;
+  let deliveryId = delivery.data?.delivery_id as string | undefined;
+
+  if (!deliveryId) {
+    const assigned = await manager.client.rpc("assign_delivery", {
+      p_order_id: orderId,
+      p_employee_id: shipper.userId,
+    });
+    if (assigned.error) throw assigned.error;
+    deliveryId = assigned.data as string;
+    delivery = await admin.from("deliveries")
+      .select("delivery_id,status,employee_id")
+      .eq("delivery_id", deliveryId)
+      .single();
+    if (delivery.error) throw delivery.error;
+  }
+
+  const checks = await admin.from("delivery_batch_checks")
+    .select("id")
+    .eq("delivery_id", deliveryId)
+    .eq("batch_id", batchId)
+    .eq("matched", true)
+    .maybeSingle();
+  if (checks.error) throw checks.error;
+  if (!checks.data) {
+    const verified = await shipper.client.rpc("verify_delivery_batch", {
+      p_delivery_id: deliveryId,
+      p_batch_id: batchId,
+    });
+    if (verified.error) throw verified.error;
+  }
+
+  let status = delivery.data?.status as string | undefined;
+  if (status === "assigned") {
+    const pickedUp = await shipper.client.rpc("update_delivery_status", {
+      p_delivery_id: deliveryId,
+      p_status: "picked_up",
+      p_note: "Demo delivery: picked_up",
+      p_proof_image_url: null,
+    });
+    if (pickedUp.error) throw pickedUp.error;
+    status = "picked_up";
+  }
+  if (status === "picked_up") {
+    const delivering = await shipper.client.rpc("update_delivery_status", {
+      p_delivery_id: deliveryId,
+      p_status: "delivering",
+      p_note: "Demo delivery: delivering",
+      p_proof_image_url: null,
+    });
+    if (delivering.error) throw delivering.error;
+    status = "delivering";
+  }
+
+  if (status === "delivering") {
+    await ensureDemoPayosRemittance(deliveryId, shipper);
+    const delivered = await shipper.client.rpc("update_delivery_status", {
+      p_delivery_id: deliveryId,
+      p_status: "delivered",
+      p_note: "Demo order delivered successfully",
+      p_proof_image_url: null,
+    });
+    if (delivered.error) throw delivered.error;
+  }
+
+  return orderId;
+}
+
 async function createCompletedOrder(
   customer: SignedInUser,
   manager: SignedInUser,
@@ -204,7 +368,9 @@ async function createCompletedOrder(
     .eq("note", note)
     .maybeSingle();
   if (existing.error) throw existing.error;
-  if (existing.data) return existing.data.order_id as string;
+  if (existing.data) {
+    return await ensureCompletedDeliveryState(existing.data.order_id as string, manager, shipper, batchId);
+  }
 
   await addCartItem(
     customer,
@@ -248,12 +414,8 @@ async function createCompletedOrder(
     });
     if (updated.error) throw updated.error;
   }
-  const collected = await shipper.client.rpc("record_delivery_collection", {
-    p_delivery_id: deliveryId,
-    p_method: "bank_transfer",
-    p_proof_url: null,
-  });
-  if (collected.error) throw collected.error;
+  await ensureDemoPayosRemittance(deliveryId, shipper);
+
   const delivered = await shipper.client.rpc("update_delivery_status", {
     p_delivery_id: deliveryId,
     p_status: "delivered",

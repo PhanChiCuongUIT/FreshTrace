@@ -26,6 +26,7 @@
     "test:report-notifications": "powershell -ExecutionPolicy Bypass -File scripts/test-report-notifications.ps1",
     "test:non-manager-crud": "powershell -ExecutionPolicy Bypass -File scripts/test-non-manager-crud.ps1",
     "test:shipper-deliveries": "node scripts/check-shipper-deliveries.cjs",
+    "test:production-smoke": "powershell -ExecutionPolicy Bypass -File scripts/test-production-smoke.ps1",
     "frontend:dev": "npm --prefix frontend run dev",
     "frontend:dev:lan": "npm --prefix frontend run dev -- --host 0.0.0.0",
     "frontend:build": "npm --prefix frontend run build",
