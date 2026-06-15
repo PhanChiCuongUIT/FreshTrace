@@ -60,7 +60,7 @@ Production URLs should be:
 
 ```env
 APP_URL=https://freshtrace-app.vercel.app
-ALLOWED_ORIGINS=https://freshtrace-app.vercel.app,https://freshtrace.online,https://www.freshtrace.online
+ALLOWED_ORIGINS=https://freshtrace-app.vercel.app,https://*.vercel.app,https://freshtrace.online,https://www.freshtrace.online
 PAYOS_RETURN_URL=https://freshtrace-app.vercel.app/payment/success
 PAYOS_CANCEL_URL=https://freshtrace-app.vercel.app/payment/cancel
 PAYOS_WEBHOOK_URL=https://puwfoxlvjzudypbxtrnr.supabase.co/functions/v1/payos-webhook
@@ -282,11 +282,14 @@ If Assistant, account-status, PayOS sync, or any Edge Function shows
 
 - Vercel `VITE_API_BASE_URL` must be
   `https://puwfoxlvjzudypbxtrnr.supabase.co/functions/v1`.
-- `ALLOWED_ORIGINS` in Supabase Edge Function secrets must include the exact
-  domain opened in the browser.
+- `ALLOWED_ORIGINS` in Supabase Edge Function secrets must include the domain
+  opened in the browser. For Vercel preview/deployment URLs, use
+  `https://*.vercel.app` with the repository CORS helper.
 - After changing Vercel env vars, redeploy Vercel.
 - After changing `supabase-secrets.production.env`, rerun
   `scripts/deploy-production.ps1 -SkipDbPush -SkipFunctions`.
+- After changing Edge Function code or shared CORS code, rerun
+  `scripts/deploy-production.ps1 -SkipDbPush` so functions are redeployed.
 
 The frontend includes `frontend/vercel.json` so Vercel rewrites direct links such
 as `/auth/confirm`, `/reset-password`, `/orders/...`, and `/trace/...` to
