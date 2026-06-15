@@ -14,7 +14,7 @@ type PayosRequest = {
   collection_id: string | null;
   purpose: "checkout" | "customer_cod" | "shipper_remittance";
   provider_order_code: number;
-  amount: number;
+  amount: number | string;
   status: "pending" | "paid" | "cancelled" | "failed";
 };
 type PayosStatusResponse = {
@@ -44,6 +44,19 @@ function extractTransactionId(data: PayosStatusResponse["data"]): string | null 
     return String(first?.reference ?? first?.transactionId ?? data?.id ?? data?.orderCode ?? "").trim() || null;
   }
   return String(data?.id ?? data?.orderCode ?? "").trim() || null;
+}
+
+function numeric(value: unknown) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function isProviderPaid(data: PayosStatusResponse["data"], expectedAmount: number | string) {
+  const providerStatus = String(data?.status ?? "").toUpperCase();
+  const amount = numeric(expectedAmount);
+  const paid = numeric(data?.amountPaid);
+  const remaining = data?.amountRemaining == null ? null : numeric(data.amountRemaining);
+  return providerStatus === "PAID" || (amount > 0 && paid >= amount) || remaining === 0;
 }
 
 Deno.serve(async (request) => {
@@ -134,7 +147,7 @@ Deno.serve(async (request) => {
     }
 
     const providerStatus = String(provider.data.status ?? "").toUpperCase();
-    if (providerStatus === "PAID") {
+    if (isProviderPaid(provider.data, localRequest.amount)) {
       const confirmation = await admin.rpc("confirm_payos_request", {
         p_provider_order_code: localRequest.provider_order_code,
         p_amount: localRequest.amount,

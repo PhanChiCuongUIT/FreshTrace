@@ -346,14 +346,14 @@ await expectFailure("Fresh Rescue on batch outside expiry window", () =>
     created_by: manager.userId,
   }));
 const existingRescue = await manager.client.from("fresh_rescue_deals").select("deal_id")
-  .eq("batch_id", "40000000-0000-0000-0000-000000000002").eq("status", "active").maybeSingle();
+  .eq("batch_id", "40000000-0000-0000-0000-000000000006").eq("status", "active").maybeSingle();
 if (existingRescue.error) throw existingRescue.error;
 if (!existingRescue.data) {
   const { error: rescueError } = await manager.client.from("fresh_rescue_deals").insert({
-    batch_id: "40000000-0000-0000-0000-000000000002",
+    batch_id: "40000000-0000-0000-0000-000000000006",
     title: "Valid rescue",
-    original_price: 32000,
-    rescue_price: 25000,
+    original_price: 18000,
+    rescue_price: 12000,
     end_at: new Date(Date.now() + 86400000).toISOString(),
     created_by: manager.userId,
   });

@@ -115,6 +115,7 @@ if (-not $SkipSecrets) {
 
 if (-not $SkipFunctions) {
   $functions = @(
+    "account-status",
     "admin-users",
     "assign-delivery",
     "cancel-order",

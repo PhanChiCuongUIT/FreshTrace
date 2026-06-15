@@ -34,6 +34,17 @@ function formatContact(name: string | null | undefined, email: string | null | u
   return safeEmail ? `${safeName} <${safeEmail}>` : safeName;
 }
 
+async function syncAuthAccountStatus(
+  admin: ReturnType<typeof adminClient>,
+  authUserId: string,
+  status: "active" | "inactive" | "banned",
+) {
+  const { error } = await admin.auth.admin.updateUserById(authUserId, {
+    ban_duration: status === "active" ? "none" : "876000h",
+  });
+  if (error) throw new HttpError(502, `Could not sync Supabase Auth account status: ${error.message}`);
+}
+
 function statusMailHtml(
   name: string,
   status: "inactive" | "banned",
@@ -171,6 +182,22 @@ Deno.serve(async (request) => {
         .select("user_id,email,name,status,roles(role_name)")
         .single();
       if (error || !data) throw new HttpError(404, "User not found");
+      let authStatusSynced = false;
+      if (body.status) {
+        try {
+          await syncAuthAccountStatus(admin, current.data.auth_user_id, body.status);
+          authStatusSynced = true;
+        } catch (authError) {
+          const rollback = await admin.from("users").update({
+            status: current.data.status,
+            role_id: current.data.role_id,
+          }).eq("user_id", body.userId);
+          if (rollback.error) {
+            console.error("Could not roll back user governance update after auth status failure", rollback.error);
+          }
+          throw authError;
+        }
+      }
       if ((body.status === "inactive" || body.status === "banned") && current.data.email) {
         try {
           const actorProfile = await admin.from("users")
@@ -204,6 +231,13 @@ Deno.serve(async (request) => {
           }).eq("user_id", body.userId);
           if (rollback.error) {
             console.error("Could not roll back user governance update after email failure", rollback.error);
+          }
+          if (authStatusSynced) {
+            try {
+              await syncAuthAccountStatus(admin, current.data.auth_user_id, current.data.status);
+            } catch (authRollbackError) {
+              console.error("Could not roll back Supabase Auth account status after email failure", authRollbackError);
+            }
           }
           throw new HttpError(
             502,

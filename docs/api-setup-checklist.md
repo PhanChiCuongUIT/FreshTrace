@@ -47,6 +47,10 @@ https://PROJECT_REF.supabase.co/functions/v1/payos-webhook
 The webhook does not require a Supabase JWT, but every payload must have a valid
 payOS HMAC signature.
 
+If your payOS account cannot configure webhooks yet, deploy `sync-payos-payment`.
+FreshTrace calls it after the payOS return URL and from the Shipper COD QR screen
+to reconcile paid payment links by querying the payOS payment-request API.
+
 ## QR
 
 Set:
@@ -85,3 +89,6 @@ npm run test:types
 
 After deployment, test signup, catalog search, COD checkout, payOS sandbox payments,
 webhooks, delivery, Realtime chat, and notifications with accounts for every role.
+Also test inactive/banned account handling through `account-status`, because
+login, signup, and password reset are expected to fail before a blocked account can
+continue.

@@ -17,6 +17,17 @@ Standard CRUD uses Supabase JS/PostgREST. RLS restricts rows by user and role.
 - The signup trigger creates a `customer` profile and one cart.
 - Current profile: `users?select=*,roles(role_name)`.
 - Admins create, disable, and assign roles through `admin-users`.
+- Login, registration and password reset call `account-status` first so inactive
+  or banned email addresses get a clear blocked-account message before Supabase
+  Auth sends another email or creates a session.
+
+```http
+POST /functions/v1/account-status
+{"email":"customer@example.com"}
+```
+
+The endpoint has `verify_jwt = false`, but it only reveals whether an email is
+allowed or blocked. It does not return user profile data.
 
 ```http
 POST /functions/v1/admin-users
@@ -27,6 +38,10 @@ POST /functions/v1/admin-users
 POST /functions/v1/admin-users
 {"action":"update","userId":"<uuid>","status":"banned","role":"employee"}
 ```
+
+Status changes to `inactive` or `banned` also sync the Supabase Auth account ban
+state. If the governance email cannot be sent, the database status update and Auth
+ban change are rolled back together.
 
 ## Catalog
 
@@ -62,8 +77,10 @@ Catalog tables are also available through PostgREST:
 ## Manager and Admin Operations
 
 Managers maintain categories, products, batches, prices, and rescue deals through
-PostgREST. Database constraints validate approved suppliers, product/batch consistency,
-prices, inventory, and rescue eligibility.
+PostgREST and catalog RPCs. Database constraints validate approved suppliers,
+product/batch consistency, prices, inventory, and rescue eligibility. Product
+images are selected locally in the Manager UI and uploaded to Cloudinary only
+after the Manager confirms Save.
 
 Adjust inventory:
 
@@ -142,8 +159,10 @@ POST /functions/v1/cancel-order
 {"orderId":"<uuid>","reason":"Plans changed"}
 ```
 
-The function cancels an existing payOS payment link before releasing reserved stock.
-A paid order cannot be cancelled until a refund workflow is implemented.
+The function checks payOS before releasing reserved stock. If payOS already reports
+the payment as paid, FreshTrace confirms the local payment first, then runs the
+paid-pending cancellation workflow and issues the replacement coupon. If payOS is
+still pending, the function cancels the payment link before cancelling the order.
 
 ## Orders and Delivery
 
@@ -218,6 +237,18 @@ corresponding payment or remittance transition.
 Only a `pending` order may be cancelled. If its payment is already `paid`, the
 transaction remains paid for audit purposes and FreshTrace issues an active coupon
 whose value equals the payment amount.
+
+Manual reconciliation without webhook:
+
+```http
+POST /functions/v1/sync-payos-payment
+{"orderId":"<uuid>","purpose":"checkout"}
+```
+
+The sync endpoint reads payOS `GET /v2/payment-requests/{id}` and confirms the
+matching local request when payOS reports `PAID`, `amountRemaining = 0`, or
+`amountPaid` is at least the expected FreshTrace amount. This supports production
+accounts where payOS webhook configuration is unavailable.
 
 ## QR Traceability
 

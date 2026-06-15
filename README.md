@@ -1,13 +1,30 @@
 # FreshTrace
 
 FreshTrace is a smart clean-food marketplace with traceability, Fresh Rescue,
-role-based operations, delivery verification, realtime communication, and payments.
+role-based operations, delivery verification, realtime communication, coupons,
+email governance, and COD/payOS payments.
+
+## Features
+
+- Customer marketplace with responsive desktop/mobile product discovery, cart,
+  coupons, checkout, order tracking, reviews, reports, chat, QR traceability and
+  Fresh Assistant recommendations.
+- Mobile-first Shipper workflow with assigned/picked-up/delivering/delivered
+  delivery states, batch QR verification, COD cash collection and payOS QR
+  settlement.
+- Manager workspace for suppliers, categories, products, batches, prices, Fresh
+  Rescue and audited inventory adjustments.
+- Admin workspace for users, governance, operational monitoring, finance reports,
+  CSV export and account status enforcement.
+- Hardened backend with PostgreSQL constraints, RLS, RPC workflows, Edge
+  Functions, Cloudinary signed uploads, Realtime chat/notifications and Gemini
+  Assistant fallback logic.
 
 ## Stack
 
 - Frontend: React 19, TypeScript, Vite, Tailwind CSS, TanStack Query
 - Backend: Supabase Auth, PostgreSQL, RLS, PostgREST, RPC, Realtime, Edge Functions
-- Integrations: payOS, Cloudinary, QR traceability
+- Integrations: payOS, Cloudinary, Resend/Gmail SMTP, Gemini, QR traceability
 
 The application covers the 34 MVP use cases in the project report. See
 [End-to-End Use Case Coverage](docs/use-case-coverage.md) and
@@ -213,7 +230,9 @@ for chat subscriptions, notifications, payOS, Cloudinary signing, QR generation,
 Fresh Assistant, delivery APIs, and admin user APIs.
 
 Add payOS and Cloudinary credentials to `supabase/.env.local` before testing online
-payment or image upload. The catalog, cart, COD, database RPCs and Auth do not need
+payment or image upload. Product/avatar/chat images are uploaded to Cloudinary
+through signed Edge Function payloads, and Manager product image changes are only
+committed after Save. The catalog, cart, COD, database RPCs and Auth do not need
 those third-party credentials.
 
 If the local Edge Runtime receives HTTP 403 while downloading `@panva/jose` from
@@ -241,6 +260,10 @@ transactional checkout, COD settlement and cash remittance, delivery batch gates
 inventory enforcement, Fresh Rescue eligibility, paid cancellation coupons,
 failed-delivery reassignment, report ownership and banned-user access revocation.
 
+Fresh Rescue original prices are stored from the active `prices` table, not from
+free text. The Manager Rescue form shows the original price as read-only and the
+database rejects active rescue deals without a valid active catalog price.
+
 ## Bootstrap the First Admin
 
 Signup creates a Customer profile. Promote the first account in the Supabase SQL
@@ -257,20 +280,25 @@ The Admin can then create Managers and Employees from the frontend.
 ## Deploy
 
 ```powershell
-npx supabase login
-npx supabase link --project-ref YOUR_PROJECT_REF
-npx supabase db push
-npx supabase secrets set --env-file supabase-secrets.env
-npx supabase functions deploy
+powershell -ExecutionPolicy Bypass -File scripts/deploy-production.ps1
 ```
 
-Configure the payOS webhook:
+The compact production setup is Vercel for the frontend and Supabase Cloud for
+Auth, PostgreSQL, Realtime and Edge Functions. See
+[Production Deployment](docs/production-deploy.md) for the full checklist.
+
+Configure the payOS webhook when your payOS account supports it:
 
 ```text
 https://YOUR_PROJECT_REF.supabase.co/functions/v1/payos-webhook
 ```
 
-Build the frontend and deploy `frontend/dist` to a static host:
+If webhook access is not enabled for your account yet, FreshTrace still supports
+the demo/defense payment flow through `sync-payos-payment`, which checks payOS
+payment-request status after return/callback screens and from the Shipper COD QR
+flow.
+
+Build the frontend and deploy `frontend/dist` to Vercel or another static host:
 
 ```powershell
 npm run frontend:build
@@ -328,6 +356,8 @@ also require a publicly reachable HTTPS backend.
 - [Integration Setup Checklist](docs/api-setup-checklist.md)
 - [Required Secrets](docs/required-secrets.md)
 - [Frontend Guide](frontend/README.md)
+- [Production Deployment](docs/production-deploy.md)
+- [Presentation and Demo Guide](docs/presentation-demo-guide.md)
 
 ## Security
 

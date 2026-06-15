@@ -94,6 +94,10 @@ The script stops immediately if any Supabase CLI step fails. Do not continue to
 deploy functions when `supabase db push` fails, because the functions expect the
 latest database schema.
 
+The function list includes `account-status`, `admin-users`, `cancel-order`,
+`sync-payos-payment`, and `payos-webhook`. Redeploy these functions after changing
+account governance, PayOS, or payment reconciliation code.
+
 This is destructive for the linked production database. Use it only when the
 remote database can be wiped.
 
@@ -273,8 +277,8 @@ dist
 
 Add the browser-safe variables from `.env.production` to Vercel. Never add service-role, payOS secret, Cloudinary secret, SMTP password, or Gemini key to Vercel.
 
-If Assistant or any Edge Function shows `TypeError: Failed to fetch` on
-production but works locally, check these first:
+If Assistant, account-status, PayOS sync, or any Edge Function shows
+`TypeError: Failed to fetch` on production but works locally, check these first:
 
 - Vercel `VITE_API_BASE_URL` must be
   `https://puwfoxlvjzudypbxtrnr.supabase.co/functions/v1`.
@@ -296,12 +300,12 @@ Set webhook URL:
 https://puwfoxlvjzudypbxtrnr.supabase.co/functions/v1/payos-webhook
 ```
 
-In the Vietnamese payOS dashboard, do not use `Thiết lập -> Logs`; that page only
-shows delivery attempts and the `Chưa cấu hình URL` status. Open `Tích hợp` from
-the left sidebar, then open the webhook/callback configuration for the payment
-channel that owns your `PAYOS_CLIENT_ID`. The exact label can vary by dashboard
-version, but it is usually the setting for `Webhook URL`, `URL nhận kết quả
-thanh toán`, or `Callback URL`. Paste the URL above there.
+In the Vietnamese payOS dashboard, do not use `Settings -> Logs`; that page only
+shows delivery attempts and the "URL not configured" status. Open `Integration`
+from the left sidebar, then open the webhook/callback configuration for the
+payment channel that owns your `PAYOS_CLIENT_ID`. The exact label can vary by
+dashboard version, but it is usually `Webhook URL`, `Payment result URL`, or
+`Callback URL`. Paste the URL above there.
 
 If the dashboard still does not show an editable webhook field, use the payOS
 support/help channel and ask them to enable or set the webhook/callback URL for
@@ -317,13 +321,19 @@ work for the defense/demo flow:
 2. payOS redirects the browser back to `/payment/success` after payment.
 3. FreshTrace calls `sync-payos-payment`, which reads the payment link status
    from payOS API `GET /v2/payment-requests/{id}` and confirms the matching
-   local payment when payOS reports `PAID`.
+   local payment when payOS reports `PAID`, `amountRemaining = 0`, or
+   `amountPaid` is at least the expected FreshTrace payment amount.
 4. On the Shipper mobile screen, the payOS QR dialog also has `Check payOS
    status` for COD direct-transfer/remittance cases.
 
 Webhook remains the best production option because it updates payments without a
 user returning to the app, but the sync fallback is enough for demo production
 and for accounts where webhook configuration is not available yet.
+
+When cancelling an order, `cancel-order` first checks payOS. If the payment link
+has already been paid, FreshTrace confirms the local payment before running the
+cancellation workflow. This prevents the production case where payOS was paid but
+the local `payments` row still stayed `pending`.
 
 Return URL:
 

@@ -13,7 +13,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = await supabase.auth.getSession()
     if (!data.session) return setProfile(null)
     const result = await supabase.from('users').select('*,roles(role_name)').eq('auth_user_id', data.session.user.id).single()
-    if (result.error) throw result.error
+    if (result.error || result.data?.status !== 'active') {
+      setProfile(null)
+      await supabase.auth.signOut()
+      return
+    }
     setProfile(result.data as Profile)
   }
 

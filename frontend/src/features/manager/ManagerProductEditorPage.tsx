@@ -23,6 +23,8 @@ export function ManagerProductEditorPage() {
   const feedback = useFeedback()
   const [form, setForm] = useState({ name: '', categoryId: '', supplierId: '', unit: 'kg', description: '', certificate: '', imageUrl: '', status: 'active' })
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [pendingImage, setPendingImage] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState('')
   const lookup = useQuery({ queryKey: ['manager-product-editor', recordId], queryFn: async () => {
     const [categories, suppliers, product] = await Promise.all([
       supabase.from('categories').select('category_id,name,status').order('name'),
@@ -39,33 +41,39 @@ export function ManagerProductEditorPage() {
     const timer = window.setTimeout(() => setForm({ name: product.name, categoryId: product.category_id ?? '', supplierId: product.supplier_id ?? '', unit: product.unit, description: product.description ?? '', certificate: product.certificate ?? '', imageUrl: product.image_url ?? '', status: product.status }), 0)
     return () => window.clearTimeout(timer)
   }, [lookup.data?.product])
+  useEffect(() => () => { if (previewUrl) URL.revokeObjectURL(previewUrl) }, [previewUrl])
   const save = async () => {
     if (!form.name.trim() || !form.unit.trim()) return feedback.error('Product name and unit are required')
     if (!form.categoryId || !form.supplierId) return feedback.error('Select a category and an approved supplier')
     const ok = await feedback.confirm({ title: editing ? 'Save product changes?' : 'Create product?', message: 'Customers will see active products in the marketplace.', confirmLabel: editing ? 'Save product' : 'Create product' })
     if (!ok) return
-    const values = { name: form.name.trim(), category_id: form.categoryId || null, supplier_id: form.supplierId || null, unit: form.unit.trim(), description: form.description.trim() || null, certificate: form.certificate.trim() || null, image_url: form.imageUrl.trim() || null, status: form.status }
+    let imageUrl = form.imageUrl.trim() || null
+    if (pendingImage) {
+      setUploadingImage(true)
+      try {
+        imageUrl = await uploadImage(pendingImage, 'products')
+      } catch (error) {
+        setUploadingImage(false)
+        return feedback.error(String(error))
+      }
+      setUploadingImage(false)
+    }
+    const values = { name: form.name.trim(), category_id: form.categoryId || null, supplier_id: form.supplierId || null, unit: form.unit.trim(), description: form.description.trim() || null, certificate: form.certificate.trim() || null, image_url: imageUrl, status: form.status }
     const result = editing
       ? await supabase.from('products').update(values).eq('product_id', recordId).select('product_id').single()
       : await supabase.from('products').insert(values).select('product_id').single()
     if (result.error) return feedback.error(catalogErrorMessage(result.error))
-    await Promise.all([client.invalidateQueries({ queryKey: ['manager-catalog'] }), client.invalidateQueries({ queryKey: ['products'] })])
+    await Promise.all([client.invalidateQueries({ queryKey: ['manager-catalog'] }), client.invalidateQueries({ queryKey: ['products'] }), client.invalidateQueries({ queryKey: ['product-detail'] }), client.invalidateQueries({ queryKey: ['home-rescue-deals'] })])
     feedback.success(editing ? 'Product updated' : 'Product created')
     navigate('/manager/catalog/products')
   }
   const uploadProductImage = async (file?: File) => {
     if (!file) return
     if (!file.type.startsWith('image/')) return feedback.error('Product image must be an image file')
-    setUploadingImage(true)
-    try {
-      const imageUrl = await uploadImage(file, 'products')
-      setForm(value => ({ ...value, imageUrl }))
-      feedback.success('Product image uploaded')
-    } catch (error) {
-      feedback.error(String(error))
-    } finally {
-      setUploadingImage(false)
-    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPendingImage(file)
+    setPreviewUrl(URL.createObjectURL(file))
+    feedback.success('Product image selected. Save the product to upload it.')
   }
   if (lookup.isLoading) return <LoadingState/>
   if (lookup.error) return <ErrorState error={lookup.error}/>
@@ -78,8 +86,8 @@ export function ManagerProductEditorPage() {
       <label className="text-sm font-bold">Approved supplier<select className="input mt-1" required value={form.supplierId} onChange={event => setForm(value => ({ ...value, supplierId: event.target.value }))}><option value="">Select supplier</option>{lookup.data?.suppliers.filter(item => item.status === 'approved' || item.supplier_id === form.supplierId).map(item => <option key={item.supplier_id} value={item.supplier_id}>{item.name}{item.status !== 'approved' ? ` (${item.status})` : ''}</option>)}</select></label>
       <label className="text-sm font-bold">Certificate<input className="input mt-1" value={form.certificate} onChange={event => setForm(value => ({ ...value, certificate: event.target.value }))}/></label>
       <label className="text-sm font-bold">Status<select className="input mt-1" value={form.status} onChange={event => setForm(value => ({ ...value, status: event.target.value }))}><option value="active">Active</option><option value="inactive">Inactive</option></select></label>
-      <label className="btn-secondary cursor-pointer justify-center xl:col-span-2"><Camera size={18}/>{uploadingImage ? 'Uploading image...' : form.imageUrl ? 'Change product image' : 'Upload product image'}<input className="hidden" type="file" accept="image/*" onChange={event => uploadProductImage(event.target.files?.[0])}/></label>
-      {form.imageUrl && <img src={form.imageUrl} alt={form.name || 'Product preview'} className="h-56 w-full rounded-2xl object-cover xl:col-span-2"/>}
+      <label className="btn-secondary cursor-pointer justify-center xl:col-span-2"><Camera size={18}/>{uploadingImage ? 'Uploading image...' : previewUrl || form.imageUrl ? 'Change product image' : 'Upload product image'}<input className="hidden" type="file" accept="image/*" onChange={event => uploadProductImage(event.target.files?.[0])}/></label>
+      {(previewUrl || form.imageUrl) && <img src={previewUrl || form.imageUrl} alt={form.name || 'Product preview'} className="h-56 w-full rounded-2xl object-cover xl:col-span-2"/>}
       <label className="text-sm font-bold xl:col-span-2">Description<textarea className="input mt-1" rows={5} value={form.description} onChange={event => setForm(value => ({ ...value, description: event.target.value }))}/></label>
       <div className="flex flex-wrap gap-3 xl:col-span-2"><button className="btn-primary">{editing ? 'Save product' : 'Create product'}</button><Link className="btn-secondary" to="/manager/catalog/products">Cancel</Link></div>
     </form>

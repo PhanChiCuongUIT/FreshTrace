@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { callFunction } from '../../lib/api'
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -18,6 +19,17 @@ export function ResetPasswordPage() {
     if (password !== confirmPassword) return setError('Passwords do not match.')
 
     setBusy(true)
+    const user = await supabase.auth.getUser()
+    const email = user.data.user?.email
+    if (email) {
+      try {
+        await callFunction<{ allowed: boolean }>('account-status', { email })
+      } catch (statusError) {
+        await supabase.auth.signOut()
+        setBusy(false)
+        return setError(statusError instanceof Error ? statusError.message : String(statusError))
+      }
+    }
     const result = await supabase.auth.updateUser({ password })
     setBusy(false)
     if (result.error) return setError(result.error.message)

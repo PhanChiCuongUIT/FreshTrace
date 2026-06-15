@@ -381,7 +381,7 @@ try {
       batch_id: batchId,
       title: `Invalid rescue ${suffix}`,
       original_price: 100000,
-      rescue_price: 100000,
+      rescue_price: 120000,
       start_at: isoDateTime(-1),
       end_at: isoDateTime(12),
       status: "active",

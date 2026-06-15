@@ -11,8 +11,13 @@
 - Existing batches can be locked or corrected after their product is inactive, but new batches can only be created for active products.
 - Automatic `sold_out` state uses sellable quantity (`quantity_available - quantity_reserved`), so fully reserved stock is not exposed as available.
 - Price edits affect current and future catalog price selection. Existing order items retain their captured purchase price.
-- The Prices editor creates `normal` and `promotion` prices. Fresh Rescue pricing is managed by the Rescue editor because customer search reads rescue prices from `fresh_rescue_deals`.
+- The Prices editor creates `normal` and `promotion` prices. The Rescue editor
+  lets the Manager enter only the discounted rescue price; `original_price` is
+  read-only in the UI and is stored from the current active `prices` row.
 - Fresh Rescue edits refresh customer rescue listings. Deal and batch statuses are recalculated after batch, inventory, or rescue changes.
+- Product image changes are staged as local previews. The image is uploaded to
+  Cloudinary only after the Manager confirms Save, so cancelling an edit does not
+  leave an unused product image URL in the catalog.
 - The fixed demo batch UUIDs are refreshed with relative dates by migration `202606120005_refresh_demo_catalog_dates.sql`. User-created catalog data is never modified by that migration.
 
 ## Constraint handling
@@ -29,7 +34,7 @@
 | Sellable stock | Fully reserved stock is sold out | Batch and active Rescue status synchronize from available minus reserved |
 | Direct batch quantity update | Direct table update is blocked | Manager Catalog uses the atomic RPC |
 | Price batch | Batch must belong to the selected product | Trigger rejects mismatched data |
-| Rescue deal | Active batch must expire within 3 days, have stock, and use a lower rescue price | Trigger rejects invalid or duplicate active deals |
+| Rescue deal | Active batch must expire within 3 days, have stock, have an active normal/promotion price, and use a lower rescue price | Trigger rejects invalid or duplicate active deals and overwrites `original_price` from the active catalog price |
 | Hard delete | Referenced suppliers, categories, products, and batches are protected by foreign keys | UI uses status changes instead of hard delete; historical orders and audit data remain intact |
 
 All Manager Catalog mutations show a confirmation dialog. Edit dialogs include linked-record counts or the expected downstream effect, and database errors are shown through the application feedback component. Inserts and updates request the saved primary key, preventing a stale or row-level-security-filtered operation from being reported as successful.
@@ -43,6 +48,27 @@ npm run test:catalog-crud
 ```
 
 The test creates temporary records, verifies valid CRUD propagation, duplicate handling, atomic rollback, supplier/category/product/batch relationship rules, sellable-stock status synchronization, safe deletes, and expected constraint failures, then removes all temporary records.
+
+## Inventory state and CRUD model
+
+Inventory is intentionally handled as audited stock control instead of ordinary
+hard-delete CRUD. A batch creates its inventory row automatically. Managers can
+correct stock through the Inventory drawer, and every correction writes an
+`inventory_transactions` row.
+
+Adjustment types:
+
+| Type | Meaning | Typical use |
+| --- | --- | --- |
+| `stock_count` | Set the counted physical available quantity | End-of-day or warehouse recount correction |
+| `import` | Increase available quantity | Supplier delivers more accepted stock for the batch |
+| `export` | Decrease available quantity | Waste, loss, manual outbound correction, or non-order stock removal |
+| `reserve` | Increase reserved quantity | Manual reservation correction when an order reservation must be repaired |
+| `release` | Release reserved quantity back to available stock | Cancelled order or reservation mismatch correction |
+
+This model is more appropriate than editing/deleting inventory rows directly
+because product traceability, order history, delivery verification, and finance
+reports all depend on the stock trail remaining auditable.
 
 ## Coupon lifecycle
 

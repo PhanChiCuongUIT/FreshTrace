@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { authRedirect } from '../../lib/authRedirects'
 import { supabase } from '../../lib/supabase'
+import { callFunction } from '../../lib/api'
 import { useAuth } from './auth-context'
 
 export function LoginPage() {
@@ -15,6 +16,12 @@ export function LoginPage() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setMessage('')
+    try {
+      await callFunction<{ allowed: boolean }>('account-status', { email: email.trim().toLowerCase() })
+    } catch (error) {
+      setBusy(false)
+      return setError(error instanceof Error ? error.message : String(error))
+    }
     const result = await supabase.auth.signInWithPassword({
       email: email.trim().toLowerCase(),
       password,
@@ -25,6 +32,11 @@ export function LoginPage() {
   const forgotPassword = async () => {
     setError(''); setMessage('')
     if (!email.trim()) return setError('Enter your email first, then request a reset link.')
+    try {
+      await callFunction<{ allowed: boolean }>('account-status', { email: email.trim().toLowerCase() })
+    } catch (error) {
+      return setError(error instanceof Error ? error.message : String(error))
+    }
     const result = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo: authRedirect('/reset-password') })
     if (result.error) setError(result.error.message)
     else setMessage('Password reset email sent. Check your email inbox.')

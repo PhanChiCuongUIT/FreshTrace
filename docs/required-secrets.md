@@ -16,6 +16,11 @@
 - Production return URL
 - Production cancel URL
 
+Webhook URL is recommended for real production, but FreshTrace also deploys
+`sync-payos-payment` so demo production can reconcile paid payment links after
+the payOS return URL or from the Shipper COD QR dialog when webhook access is not
+available yet.
+
 ## Required for Cloudinary
 
 - `CLOUDINARY_CLOUD_NAME`
