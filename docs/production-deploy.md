@@ -50,6 +50,7 @@ Where to get each missing value:
 - `SMTP_PASS`: Resend -> API Keys -> create Sending access key. It starts with `re_`.
 - `SMTP_ADMIN_EMAIL`: use `no-reply@mail.freshtrace.online` after `mail.freshtrace.online` is verified in Resend.
 - `SUPPORT_EMAIL`: use `support@freshtrace.online`; forward it in Porkbun to your real inbox.
+- `EMAIL_LOGO_URL`: optional public HTTPS logo URL. If omitted, Edge Function emails use the default FreshTrace logo on Cloudinary.
 - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`: Cloudinary Dashboard -> API Keys.
 - `PAYOS_CLIENT_ID`, `PAYOS_API_KEY`, `PAYOS_CHECKSUM_KEY`: payOS Dashboard -> Developer/API credentials.
 - `GEMINI_API_KEY`: Google AI Studio -> API keys.
@@ -233,6 +234,22 @@ Username: resend
 Password: re_...
 Minimum interval per user: 60
 ```
+
+Authentication -> Emails -> Templates:
+
+- Confirm signup: copy the full HTML from `supabase/templates/confirmation.html`.
+- Reset password / Recovery: copy the full HTML from `supabase/templates/recovery.html`.
+
+Those files are the source of truth for local Auth email and should also be pasted
+into Supabase Cloud so production confirmation and password-reset email look the
+same. Both templates already include the FreshTrace logo through a public
+Cloudinary URL. If you replace the logo, upload it to a public HTTPS URL and
+update both template files, then set `EMAIL_LOGO_URL` in
+`supabase-secrets.production.env` for Edge Function emails.
+
+Admin governance emails, such as inactive/ban notices, are sent by Edge Functions
+through the shared FreshTrace layout in `supabase/functions/_shared/email.ts`.
+Deploying Edge Functions is enough to update those emails.
 
 ## 6. Vercel Frontend Settings
 

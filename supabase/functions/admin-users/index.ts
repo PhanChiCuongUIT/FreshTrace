@@ -1,5 +1,5 @@
 import { preflight } from "../_shared/cors.ts";
-import { sendMail } from "../_shared/email.ts";
+import { escapeHtml, mailto, renderFreshTraceEmail, sendMail } from "../_shared/email.ts";
 import { handleError, HttpError, json, readJson } from "../_shared/http.ts";
 import { adminClient, requireProfile } from "../_shared/supabase.ts";
 
@@ -28,10 +28,6 @@ type DeleteBody = {
 
 type Body = CreateBody | UpdateBody | DeleteBody;
 
-function escapeHtml(value: string) {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
-}
-
 function formatContact(name: string | null | undefined, email: string | null | undefined) {
   const safeName = (name || "FreshTrace Admin").trim();
   const safeEmail = (email || "").trim();
@@ -52,37 +48,34 @@ function statusMailHtml(
   const safeName = escapeHtml(name || "FreshTrace user");
   const safeReason = escapeHtml(reason);
   const safeActor = escapeHtml(formatContact(actor.name, actor.email));
-  const safeActorEmail = escapeHtml(actor.email || supportEmail);
+  const actorEmail = actor.email || supportEmail;
+  const safeActorEmail = escapeHtml(actorEmail);
   const safeSupportEmail = escapeHtml(supportEmail);
   const contactAction = status === "inactive"
     ? "to request reactivation"
     : "if you need clarification or want to appeal this decision";
-  return `<!doctype html><html><body style="margin:0;background:#f6faf3;font-family:Arial,sans-serif;color:#17301f">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f6faf3;padding:28px">
-      <tr><td align="center">
-        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#fff;border:1px solid #dfe8dc;border-radius:22px;overflow:hidden">
-          <tr><td style="background:#0f6b45;padding:24px 28px;color:#fff">
-            <h1 style="margin:0;font-size:24px;line-height:1.25">${title}</h1>
-          </td></tr>
-          <tr><td style="padding:28px">
-            <p style="font-size:16px;line-height:1.6;margin:0 0 16px">Hello ${safeName},</p>
-            <p style="font-size:15px;line-height:1.6;margin:0 0 18px">${description}</p>
-            <div style="border:1px solid #e4ece1;border-radius:16px;background:#f8fbf6;padding:16px">
-              <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0f6b45">Admin reason</p>
-              <p style="margin:0;font-size:15px;line-height:1.6">${safeReason}</p>
-            </div>
-            <div style="border:1px solid #d9eadf;border-radius:16px;background:#fff;padding:16px;margin-top:16px">
-              <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0f6b45">Admin contact</p>
-              <p style="margin:0 0 10px;font-size:15px;line-height:1.6">This account action was performed by: <strong>${safeActor}</strong>.</p>
-              <p style="margin:0;font-size:15px;line-height:1.6">Please reply to this email or contact <a href="mailto:${safeActorEmail}" style="color:#0f6b45;font-weight:700">${safeActorEmail}</a> ${contactAction}.</p>
-            </div>
-            <p style="font-size:14px;line-height:1.6;color:#657066;margin:18px 0 0">For additional support, contact <a href="mailto:${safeSupportEmail}" style="color:#0f6b45;font-weight:700">${safeSupportEmail}</a>.</p>
-            <p style="font-size:13px;line-height:1.6;color:#657066;margin:22px 0 0">FreshTrace Governance Team</p>
-          </td></tr>
-        </table>
-      </td></tr>
-    </table>
-  </body></html>`;
+  return renderFreshTraceEmail({
+    title,
+    subtitle: status === "banned"
+      ? "This account action is permanent."
+      : "Reply to the admin contact to request reactivation.",
+    greeting: `Hello ${safeName},`,
+    accent: status === "banned" ? "dark" : "green",
+    bodyHtml: `
+      <p style="font-size:15px;line-height:1.6;margin:0 0 18px">${description}</p>
+      <div style="border:1px solid #e4ece1;border-radius:16px;background:#f8fbf6;padding:16px">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0f6b45">Admin reason</p>
+        <p style="margin:0;font-size:15px;line-height:1.6">${safeReason}</p>
+      </div>
+      <div style="border:1px solid #d9eadf;border-radius:16px;background:#fff;padding:16px;margin-top:16px">
+        <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#0f6b45">Admin contact</p>
+        <p style="margin:0 0 10px;font-size:15px;line-height:1.6">This account action was performed by: <strong>${safeActor}</strong>.</p>
+        <p style="margin:0;font-size:15px;line-height:1.6">Please reply to this email or contact <a href="${mailto(actorEmail)}" style="color:#0f6b45;font-weight:700">${safeActorEmail}</a> ${contactAction}.</p>
+      </div>
+      <p style="font-size:14px;line-height:1.6;color:#657066;margin:18px 0 0">For additional support, contact <a href="${mailto(supportEmail)}" style="color:#0f6b45;font-weight:700">${safeSupportEmail}</a>.</p>
+    `,
+    footer: "FreshTrace Governance Team",
+  });
 }
 
 Deno.serve(async (request) => {

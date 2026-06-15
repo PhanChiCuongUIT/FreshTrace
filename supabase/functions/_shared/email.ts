@@ -10,6 +10,18 @@ type MailOptions = {
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+const defaultLogoUrl = "https://res.cloudinary.com/dbltlcpkc/image/upload/v1780920367/freshtrace/email/logo-freshtrace.png";
+
+type FreshTraceMailLayout = {
+  title: string;
+  subtitle?: string;
+  greeting?: string;
+  bodyHtml: string;
+  ctaLabel?: string;
+  ctaUrl?: string;
+  footer?: string;
+  accent?: "green" | "dark";
+};
 
 function requiredEnv(name: string) {
   const value = Deno.env.get(name)?.trim();
@@ -23,6 +35,65 @@ function b64(value: string) {
 
 function safeHeader(value: string) {
   return value.replace(/[\r\n]+/g, " ").trim();
+}
+
+export function escapeHtml(value: string) {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+}
+
+export function mailto(address: string) {
+  return `mailto:${encodeURI(address.trim())}`;
+}
+
+export function renderFreshTraceEmail(options: FreshTraceMailLayout) {
+  const logoUrl = Deno.env.get("EMAIL_LOGO_URL")?.trim() || defaultLogoUrl;
+  const gradient = options.accent === "dark"
+    ? "linear-gradient(135deg,#123d2b,#7bbf51)"
+    : "linear-gradient(135deg,#0f7a4f,#75c56e)";
+  const greeting = options.greeting
+    ? `<p style="margin:0 0 14px;font-size:16px;">${options.greeting}</p>`
+    : "";
+  const cta = options.ctaLabel && options.ctaUrl
+    ? `<p style="margin:28px 0;text-align:center;"><a href="${options.ctaUrl}" style="display:inline-block;border-radius:999px;background:#138a59;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:14px 28px;">${escapeHtml(options.ctaLabel)}</a></p>`
+    : "";
+  const footer = options.footer || "FreshTrace keeps clean-food orders transparent from supplier to delivery.";
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${escapeHtml(options.title)}</title>
+  </head>
+  <body style="margin:0;background:#f4f7ef;font-family:Arial,Helvetica,sans-serif;color:#172015;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f7ef;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;overflow:hidden;border-radius:28px;background:#ffffff;box-shadow:0 18px 48px rgba(23,32,21,.12);">
+            <tr>
+              <td style="background:${gradient};padding:30px;text-align:center;color:#ffffff;">
+                <img src="${escapeHtml(logoUrl)}" width="88" height="88" alt="FreshTrace" style="display:block;margin:0 auto 14px;border-radius:22px;background:#ffffff;object-fit:contain;">
+                <h1 style="margin:0;font-size:28px;line-height:1.15;">${escapeHtml(options.title)}</h1>
+                ${options.subtitle ? `<p style="margin:10px 0 0;font-size:15px;opacity:.92;">${escapeHtml(options.subtitle)}</p>` : ""}
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px;">
+                ${greeting}
+                ${options.bodyHtml}
+                ${cta}
+              </td>
+            </tr>
+            <tr>
+              <td style="border-top:1px solid #edf0e8;padding:20px 32px;text-align:center;font-size:12px;color:#7a8475;">
+                ${escapeHtml(footer)}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
 }
 
 class SmtpConnection {

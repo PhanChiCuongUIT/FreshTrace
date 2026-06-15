@@ -223,6 +223,9 @@ SMTP_SENDER_NAME=FreshTrace
 Remove spaces from the Gmail App Password before saving `SMTP_PASS`. Local Auth
 email rate limiting is raised in `supabase/config.toml` for development; hosted
 Supabase projects need the equivalent Auth rate limit set in the Dashboard/API.
+Local confirmation and password-recovery messages use the branded HTML templates
+in `supabase/templates`, including the FreshTrace logo from a public Cloudinary
+URL so the image loads on mobile Gmail.
 The email buttons open `/auth/confirm` on the frontend first, then the frontend
 verifies the token, which avoids Gmail on a phone opening a localhost-only Supabase
 verification URL.

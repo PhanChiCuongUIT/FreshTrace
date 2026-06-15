@@ -160,6 +160,8 @@ SMTP_USER=your_gmail_address@gmail.com
 SMTP_PASS=your_gmail_app_password
 SMTP_ADMIN_EMAIL=your_gmail_address@gmail.com
 SMTP_SENDER_NAME=FreshTrace
+SUPPORT_EMAIL=your_support_email@example.com
+EMAIL_LOGO_URL=https://res.cloudinary.com/dbltlcpkc/image/upload/v1780920367/freshtrace/email/logo-freshtrace.png
 ```
 
 Supabase Auth sends signup confirmation and password reset emails through real
@@ -180,6 +182,19 @@ npm run test:email -- -Email youraddress@gmail.com
 The email templates live in `supabase/templates`. The FreshTrace logo is uploaded
 to Cloudinary with `npm run seed:email-logo` so Gmail can load it from a public
 HTTPS URL instead of a local LAN address.
+
+Local Auth email uses:
+
+- `supabase/templates/confirmation.html`
+- `supabase/templates/recovery.html`
+
+Edge Function emails, such as Admin inactive/ban governance notices, use the same
+FreshTrace branded layout from `supabase/functions/_shared/email.ts`. Set
+`EMAIL_LOGO_URL` only when you want to override the default public logo.
+
+For Supabase Cloud production, copy the same Auth templates into Supabase
+Dashboard -> Authentication -> Emails -> Templates. The hosted Auth service does
+not automatically read the files in this repository.
 
 Local Auth email rate limiting is raised in `supabase/config.toml` for development
 (`auth.rate_limit.email_sent = 60`, `auth.email.max_frequency = "5s"`). If you use
