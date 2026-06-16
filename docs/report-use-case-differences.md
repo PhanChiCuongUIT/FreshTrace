@@ -55,7 +55,7 @@ because Customer Analytics was removed from scope.
 | UC36 Message reaction | One reaction per user/message | Aligned; mobile reaction control and replace/remove behavior were fixed | Strengthened |
 | UC38 Financial report by period | Select week/month/year and view aggregates | Adds arbitrary historical period selection up to today and a surrounding-period comparison chart | Strengthened |
 | UC39 Multi-Supplier packing | One consolidated Order grouped by Supplier | Aligned: one payment and one Shipper remain the deliberate domain decision | Aligned |
-| UC40 COD/payOS settlement | Customer direct transfer or Shipper cash remittance | Aligned; delivery cannot complete before the matching payOS webhook confirms the required settlement | Strengthened |
+| UC40 COD/payOS settlement | Customer direct transfer or Shipper cash remittance | Aligned; delivery cannot complete before webhook confirmation or the `sync-payos-payment` fallback confirms the required settlement | Strengthened |
 | UC41 Paid cancellation coupon | Full-value credit for paid pending cancellation | Aligned and tested for exact amount and idempotency | Aligned |
 | UC42 Finance CSV | Export selected period | Adds UTF-8 report metadata, summary/detail sections and period-consistent rows | Strengthened |
 | UC43 Share Product/Order | Share eligible entity in chat | Shared Product cards now use the same Cloudinary image resolver; ownership/relationship validation remains enforced | Strengthened |

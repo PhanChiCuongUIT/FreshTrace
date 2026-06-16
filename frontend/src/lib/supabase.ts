@@ -4,7 +4,7 @@ const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 if (!url || !key) {
-  throw new Error('Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY')
+  throw new Error('FreshTrace is not configured correctly. Please contact the system administrator.')
 }
 
 export const supabase = createClient(url, key)

@@ -114,7 +114,7 @@ npm run frontend:dev
 
 Open `http://localhost:5173`.
 
-The reset adds a representative catalog with approved and pending suppliers, twelve
+The reset adds a representative catalog with approved and pending suppliers, sixteen
 products, traceable batches, inventory, prices, and active Fresh Rescue deals.
 `npm run seed:demo` then creates operational data and these local accounts:
 
@@ -352,8 +352,6 @@ also require a publicly reachable HTTPS backend.
 - [Extended Use Cases](docs/extended-use-cases.md)
 - [System Summary](docs/system-summary.md)
 - [Physical Phone Testing](docs/mobile-testing.md)
-- [Use Case Backend Matrix](docs/use-case-backend-matrix.md)
-- [Integration Setup Checklist](docs/api-setup-checklist.md)
 - [Required Secrets](docs/required-secrets.md)
 - [Frontend Guide](frontend/README.md)
 - [Production Deployment](docs/production-deploy.md)

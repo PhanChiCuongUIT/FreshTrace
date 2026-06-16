@@ -102,7 +102,9 @@ domain model.
 ## Runtime Requirements
 
 - Realtime requires the full local Supabase stack or Supabase cloud.
-- payOS requires valid sandbox/live credentials and a publicly reachable webhook.
+- payOS requires valid sandbox/live credentials. A publicly reachable webhook is
+  recommended, and `sync-payos-payment` is available for demo/defense flows when
+  webhook access is not enabled.
 - Cloudinary uploads require valid credentials in `supabase/.env.local`.
 - Live browser camera streaming requires HTTPS or device-local `localhost`.
 - LAN HTTP mobile testing uses QR image capture/upload or manual batch code as a

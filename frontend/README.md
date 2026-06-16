@@ -14,10 +14,9 @@ for the FreshTrace marketplace.
   order preparation and assignment.
 - Employee/Shipper mobile-first: assigned deliveries, camera batch verification,
   phone call action, COD collection, payOS cash remittance, guarded status
-  transitions, failed delivery and Cloudinary proof.
+  transitions, failed delivery handling and QR/payment verification.
 - Admin desktop: metrics, users/roles/status, supplier approval, report resolution,
-  Customer Analytics, Financial Reports, and read-only product/order/payment
-  monitoring.
+  Financial Reports, and read-only product/order/payment monitoring.
 
 ## Run
 
@@ -53,7 +52,7 @@ npm run dev -- --host 0.0.0.0
 ```
 
 LAN HTTP does not provide browser camera permission. Use HTTPS or a deployed build
-for QR scanning and delivery-proof capture.
+for QR scanning and mobile capture flows.
 
 ## Verify
 

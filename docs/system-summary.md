@@ -58,7 +58,7 @@ Database: PostgreSQL with Supabase Auth/RLS/Realtime. Purpose: domain constraint
 
 Media: Cloudinary. Purpose: product images, user avatars, and chat attachments.
 
-Payments: PayOS plus COD flow. Purpose: prepaid checkout, COD QR from shipper screen, shipper cash collection/remittance, webhook/payment state updates.
+Payments: PayOS plus COD flow. Purpose: prepaid checkout, COD QR from shipper screen, shipper cash collection/remittance, webhook or sync-based payment state updates.
 
 QR: browser scanner plus image upload fallback with `BarcodeDetector`/`html5-qrcode`, QR generation endpoint and batch trace endpoint. Purpose: traceability and shipper batch verification on mobile.
 
