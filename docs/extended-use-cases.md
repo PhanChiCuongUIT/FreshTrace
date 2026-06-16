@@ -7,9 +7,10 @@ to complete the screen-navigation diagrams and improve operational usability.
 
 ### UC18 - Customer and Manager Chat
 
-- General support conversations no longer require an order or product.
-- Order-specific and product-specific conversations still validate ownership and
-  active product state.
+- Customer and Manager now share one reusable conversation per customer/manager
+  pair instead of creating a new room for every order.
+- Order and product shares still validate ownership, assignment and active product
+  state before a structured card can be sent.
 - Realtime subscriptions update messages without manual refresh.
 
 ### UC19 - Manager and Shipper Chat

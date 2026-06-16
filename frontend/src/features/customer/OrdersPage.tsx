@@ -44,7 +44,7 @@ export function OrdersPage() {
       const payment = await callFunction<{ checkoutUrl?: string; paymentUrl?: string }>('create-payos-payment', { orderId })
       const url = payment.checkoutUrl ?? payment.paymentUrl
       if (!url) throw new Error('FreshTrace could not open the payOS checkout link.')
-      window.location.href = url
+      window.location.assign(url)
     } catch (error) {
       toast(error instanceof Error ? error.message : String(error), 'error')
     }

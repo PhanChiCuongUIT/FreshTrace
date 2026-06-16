@@ -131,6 +131,33 @@ if (customerContactsError
   throw customerContactsError ?? new Error("Eligible customer chat contacts were not returned");
 }
 
+const firstManagerRoom = await customer.client.rpc("create_chat_room", {
+  p_type: "customer_manager",
+  p_other_user_id: manager.userId,
+  p_order_id: orderId,
+  p_product_id: null,
+});
+if (firstManagerRoom.error) throw firstManagerRoom.error;
+const secondManagerRoom = await customer.client.rpc("create_chat_room", {
+  p_type: "customer_manager",
+  p_other_user_id: manager.userId,
+  p_order_id: null,
+  p_product_id: "30000000-0000-0000-0000-000000000001",
+});
+if (secondManagerRoom.error) throw secondManagerRoom.error;
+if (firstManagerRoom.data !== secondManagerRoom.data) {
+  throw new Error("Customer-Manager chat should reuse one room per customer/manager pair");
+}
+const managerRoomRecord = await customer.client.from("chat_rooms")
+  .select("order_id,product_id")
+  .eq("room_id", firstManagerRoom.data)
+  .single();
+if (managerRoomRecord.error
+  || managerRoomRecord.data.order_id !== null
+  || managerRoomRecord.data.product_id !== null) {
+  throw managerRoomRecord.error ?? new Error("Customer-Manager pair room should not be tied to one order or product");
+}
+
 await expectFailure("pickup before batch verification", () =>
   employee.client.rpc("update_delivery_status", {
     p_delivery_id: deliveryId,

@@ -6,17 +6,16 @@ import { callFunction } from '../../lib/api'
 
 export function PaymentResultPage({ cancelled = false }: { cancelled?: boolean }) {
   const [params] = useSearchParams()
-  const [status, setStatus] = useState<'idle' | 'syncing' | 'paid' | 'pending' | 'failed'>('idle')
-  const [message, setMessage] = useState('')
   const providerOrderCode = useMemo(() => {
     const raw = params.get('orderCode') ?? params.get('order_code') ?? params.get('providerOrderCode')
     const parsed = raw ? Number(raw) : 0
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null
   }, [params])
+  const [status, setStatus] = useState<'idle' | 'syncing' | 'paid' | 'pending' | 'failed'>(cancelled || !providerOrderCode ? 'idle' : 'syncing')
+  const [message, setMessage] = useState('')
   useEffect(() => {
     if (cancelled || !providerOrderCode) return
     let active = true
-    setStatus('syncing')
     callFunction<{ status: string; providerStatus?: string; synced?: boolean }>('sync-payos-payment', { providerOrderCode })
       .then(result => {
         if (!active) return

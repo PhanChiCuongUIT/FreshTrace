@@ -34,7 +34,7 @@ because Customer Analytics was removed from scope.
 | UC15 Shipper batch verification | Camera/image/order QR verification | Aligned; each required Batch is marked immediately and pickup is blocked until all checks pass | Strengthened |
 | UC16 Delivery status | Picked-up, delivering, delivered or failed | Adds payment/remittance completion gates and directs a Customer who did not receive a delivered Order into the report workflow | Expanded |
 | UC17 Customer-Shipper chat | Order-linked realtime chat | Automatic room creation, grouped avatars, attachment, reaction and share flows are integrated | Strengthened |
-| UC18 Customer-Manager chat | General/product/owned-order chat | Automatic Order Manager rooms and relationship validation were added | Strengthened |
+| UC18 Customer-Manager chat | General/product/owned-order chat | Customer-Manager chat now reuses one room per customer/manager pair; product/order cards are shared inside that room after relationship validation | Strengthened |
 | UC19 Manager-Shipper chat | Operational chat for assigned Orders | Assignment authorization and automatic room membership were hardened | Strengthened |
 | UC20 Manager-Admin chat | Governance/operations chat | Role-pair authorization and profile preview were added | Strengthened |
 | UC21 Realtime notifications | Unread list, realtime updates and deep links | Adds Mark all as read, unread badges, normalized role-specific links, and report/coupon/governance notifications | Expanded |

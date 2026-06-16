@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CircleEllipsis, Download, File, Frown, Heart, Laugh, Paperclip, Send, SmilePlus, ThumbsUp, X } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -30,6 +30,12 @@ function fileSize(value: number | null) {
   return value < 1024 * 1024 ? `${Math.ceil(value / 1024)} KB` : `${(value / 1024 / 1024).toFixed(1)} MB`
 }
 
+function contactKey(contact: Contact) {
+  return contact.room_type === 'customer_manager'
+    ? `${contact.user_id}:${contact.room_type}`
+    : `${contact.user_id}:${contact.room_type}:${contact.order_id ?? ''}`
+}
+
 export function ChatPage() {
   const { profile } = useAuth()
   const feedback = useFeedback()
@@ -39,7 +45,7 @@ export function ChatPage() {
   const client = useQueryClient()
   const [roomId, setRoomId] = useState(routeRoomId ?? '')
   const [message, setMessage] = useState('')
-  const [contactKey, setContactKey] = useState('')
+  const [selectedContactKey, setSelectedContactKey] = useState('')
   const [attachment, setAttachment] = useState<File | null>(null)
   const [sending, setSending] = useState(false)
   const [reactionFor, setReactionFor] = useState('')
@@ -56,6 +62,18 @@ export function ChatPage() {
     if (result.error) throw result.error
     return result.data as Contact[]
   }})
+  const visibleContacts = useMemo(() => {
+    const map = new Map<string, Contact>()
+    for (const contact of contacts.data ?? []) {
+      const key = contactKey(contact)
+      if (!map.has(key)) {
+        map.set(key, contact.room_type === 'customer_manager'
+          ? { ...contact, order_id: null, order_code: null }
+          : contact)
+      }
+    }
+    return [...map.values()]
+  }, [contacts.data])
   const messages = useQuery({ queryKey: ['chat-messages', roomId], enabled: Boolean(roomId), queryFn: async () => {
     const result = await supabase.from('chat_messages').select('message_id,sender_id,message,attachment_url,attachment_name,attachment_type,attachment_size,shared_product_id,shared_order_id,created_at,users(name,avatar_url,email,phone,roles(role_name)),shared_product:products!chat_messages_shared_product_id_fkey(product_id,name,image_url,unit),shared_order:orders!chat_messages_shared_order_id_fkey(order_id,order_code,total_amount,status),chat_message_reactions(reaction_id,reaction,user_id)').eq('room_id', roomId).order('created_at')
     if (result.error) throw result.error
@@ -76,12 +94,15 @@ export function ChatPage() {
     if ((!shareProduct && !shareOrder) || rooms.isLoading || contacts.isLoading) return
     const run = async () => {
       if (shareOrder) {
-        const existing = rooms.data?.find(room => room.order_id === shareOrder)
-          ?? rooms.data?.find(room => room.room_type === 'customer_manager' && !room.order_id)
-        if (existing) return setRoomId(existing.room_id)
         const contact = contacts.data?.find(item => item.order_id === shareOrder)
           ?? contacts.data?.find(item => item.room_type === 'customer_manager' && !item.order_id)
         if (!contact) return
+        const existing = rooms.data?.find(room =>
+          room.room_type === contact.room_type
+          && room.peer_user_id === contact.user_id
+          && (contact.room_type === 'customer_manager' || room.order_id === contact.order_id)
+        )
+        if (existing) return setRoomId(existing.room_id)
         const result = await supabase.rpc('create_chat_room', { p_type: contact.room_type, p_other_user_id: contact.user_id, p_order_id: contact.room_type === 'customer_manager' ? shareOrder : contact.order_id, p_product_id: null })
         if (result.error) return feedback.error(result.error.message)
         setRoomId(result.data as string)
@@ -89,10 +110,10 @@ export function ChatPage() {
         return
       }
       if (shareProduct) {
-        const existing = rooms.data?.find(room => room.room_type === 'customer_manager' && !room.order_id)
-        if (existing) return setRoomId(existing.room_id)
         const contact = contacts.data?.find(item => item.room_type === 'customer_manager' && !item.order_id)
         if (!contact) return
+        const existing = rooms.data?.find(room => room.room_type === 'customer_manager' && room.peer_user_id === contact.user_id)
+        if (existing) return setRoomId(existing.room_id)
         const result = await supabase.rpc('create_chat_room', { p_type: contact.room_type, p_other_user_id: contact.user_id, p_order_id: null, p_product_id: shareProduct })
         if (result.error) return feedback.error(result.error.message)
         setRoomId(result.data as string)
@@ -102,7 +123,7 @@ export function ChatPage() {
     void run()
   }, [client, contacts.data, contacts.isLoading, feedback, rooms.data, rooms.isLoading, shareOrder, shareProduct])
   const createRoom = async () => {
-    const contact = contacts.data?.find(item => `${item.user_id}:${item.room_type}:${item.order_id ?? ''}` === contactKey)
+    const contact = visibleContacts.find(item => contactKey(item) === selectedContactKey)
     if (!contact) return feedback.error('Select a valid contact')
     const result = await supabase.rpc('create_chat_room', { p_type: contact.room_type, p_other_user_id: contact.user_id, p_order_id: contact.order_id, p_product_id: null })
     if (result.error) return feedback.error(result.error.message)
@@ -148,7 +169,7 @@ export function ChatPage() {
   if (rooms.isLoading) return <LoadingState />
   if (rooms.error) return <ErrorState error={rooms.error} />
   return <div><PageHeader eyebrow="Support" title="Chat" />
-    <details className="card mt-6 p-4"><summary className="cursor-pointer font-bold">Create a conversation</summary><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]"><select className="input" value={contactKey} onChange={event => setContactKey(event.target.value)}><option value="">Select an eligible contact</option>{contacts.data?.map(contact => <option key={`${contact.user_id}:${contact.room_type}:${contact.order_id ?? ''}`} value={`${contact.user_id}:${contact.room_type}:${contact.order_id ?? ''}`}>{contact.name} / {contact.role_name}{contact.order_code ? ` / order #${contact.order_code}` : ''}</option>)}</select><button className="btn-primary" onClick={createRoom}>Create</button></div></details>
+    <details className="card mt-6 p-4"><summary className="cursor-pointer font-bold">Create a conversation</summary><div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto]"><select className="input" value={selectedContactKey} onChange={event => setSelectedContactKey(event.target.value)}><option value="">Select an eligible contact</option>{visibleContacts.map(contact => <option key={contactKey(contact)} value={contactKey(contact)}>{contact.name} / {contact.role_name}{contact.order_code ? ` / order #${contact.order_code}` : ''}</option>)}</select><button className="btn-primary" onClick={createRoom}>Create</button></div></details>
     <div className="mt-5 grid min-h-[70vh] gap-4 lg:grid-cols-[280px_1fr]"><aside className="card flex gap-2 overflow-x-auto p-3 lg:block lg:max-h-none lg:overflow-y-auto">{!rooms.data?.length ? <EmptyState title="No conversations" /> : rooms.data.map(room => <button key={room.room_id} onClick={() => setRoomId(room.room_id)} className={`flex min-w-60 items-center gap-3 rounded-xl p-3 text-left lg:mb-2 lg:w-full ${roomId === room.room_id ? 'bg-brand-100' : 'hover:bg-black/5'}`}><div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-full bg-brand-50 font-black text-brand-700">{room.peer_avatar_url ? <img src={room.peer_avatar_url} alt="" className="h-full w-full object-cover"/> : room.peer_name?.slice(0,1)}</div><span className="min-w-0"><b className="block truncate">{room.peer_name ?? 'Conversation'}</b><small className="block truncate capitalize text-black/45">{room.peer_role}{room.order_code ? ` / order #${room.order_code}` : ''}</small></span></button>)}</aside>
       <section className="card flex min-h-[68vh] flex-col overflow-hidden">{!roomId ? <div className="m-auto text-black/45">Select a conversation</div> : <><div className="border-b bg-white px-4 py-3"><b>{rooms.data?.find(room => room.room_id === roomId)?.peer_name ?? 'Conversation'}</b><p className="text-xs capitalize text-black/45">{rooms.data?.find(room => room.room_id === roomId)?.peer_role}</p></div><div className="flex-1 space-y-1 overflow-y-auto bg-gradient-to-b from-brand-50/30 to-white p-3 sm:p-4">{messages.isLoading ? <LoadingState/> : messages.error ? <ErrorState error={messages.error}/> : messages.data?.map((item, index) => {
         const mine = item.sender_id === profile?.user_id

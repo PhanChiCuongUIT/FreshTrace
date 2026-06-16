@@ -19,7 +19,7 @@
 | UC15 | Verify order batches | `verify_delivery_batch` and audit checks | Complete |
 | UC16 | Update delivery status | `update_delivery_status` with transition guards | Complete |
 | UC17 | Customer-Shipper chat | `create_chat_room` and Realtime | Complete |
-| UC18 | Customer-Manager chat | `create_chat_room` and Realtime | Complete |
+| UC18 | Customer-Manager chat | `create_chat_room` reuses one room per customer/manager pair; Realtime handles messages/reactions | Complete |
 | UC19 | Manager-Shipper chat | `create_chat_room` and Realtime | Complete |
 | UC20 | Manager-Admin chat | `create_chat_room` and Realtime | Complete |
 | UC21 | Realtime notifications | Triggers, `notifications`, and Realtime | Complete |

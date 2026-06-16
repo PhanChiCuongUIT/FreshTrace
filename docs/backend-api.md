@@ -151,8 +151,8 @@ supabase.rpc("checkout_cart", {
 
 Checkout runs in one database transaction: it locks inventory, creates the order,
 items, payment, and tracking record, reserves stock, clears the cart, and creates
-notifications. It also assigns the least-loaded active Manager and creates the
-Customer-Manager order conversation.
+notifications. It also assigns the least-loaded active Manager and ensures the
+single Customer-Manager conversation for that customer/manager pair exists.
 
 ```http
 POST /functions/v1/cancel-order
@@ -268,11 +268,13 @@ supabase.rpc("create_chat_room", {
 })
 ```
 
-The database verifies that the Customer owns the order and that the Shipper is assigned
-to it. General Customer-Manager support rooms may omit both order and product.
-Messages are inserted into `chat_messages`; only room members can read or send.
-Use `list_my_chat_rooms()` to get the other member's correct name, avatar, role,
-phone, email, and related order code.
+The database verifies that the Customer owns the order and that the Shipper is
+assigned to it. Customer-Manager chat uses one reusable room per customer/manager
+pair. Passing an order or product validates the relationship/share target, but the
+room itself is not duplicated per order. Messages are inserted into
+`chat_messages`; only room members can read or send. Use `list_my_chat_rooms()`
+to get the other member's correct name, avatar, role, phone, email, and related
+order code when the room type is order-specific.
 
 Text and attachment-only messages are supported:
 
@@ -294,8 +296,9 @@ owner can remove it. A user has at most one reaction per message; upserting a
 different value changes the reaction.
 
 Products and orders can be shared as structured chat cards through
-`shared_product_id` or `shared_order_id`. Order sharing is restricted to the
-related order conversation unless the sender is an Admin or Manager.
+`shared_product_id` or `shared_order_id`. Order sharing is restricted to a
+conversation whose members are related to that order unless the sender is an
+Admin or Manager.
 
 Subscribe to `chat_messages`, `notifications`, `orders`, `order_tracking`, and
 `deliveries` through Supabase Realtime. Chat clients also subscribe to
