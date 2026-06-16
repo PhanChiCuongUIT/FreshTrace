@@ -15,6 +15,8 @@
     "backend:functions": "supabase functions serve --env-file supabase/.env.local",
     "backend:runtime-fix": "powershell -ExecutionPolicy Bypass -File scripts/fix-edge-runtime-jsr.ps1",
     "seed:demo": "powershell -ExecutionPolicy Bypass -File scripts/seed-demo.ps1",
+    "cleanup:test-data:local": "powershell -ExecutionPolicy Bypass -File scripts/cleanup-test-data-local.ps1",
+    "cleanup:test-data:production": "powershell -ExecutionPolicy Bypass -File scripts/cleanup-test-data-production.ps1",
     "seed:cloudinary": "deno run --allow-read --allow-net scripts/migrate-demo-assets-to-cloudinary.ts",
     "seed:product-images": "deno run --allow-read --allow-write=frontend/src/generated/productImages.json --allow-net scripts/upload-product-images-static.ts",
     "seed:email-logo": "deno run --allow-read --allow-net scripts/upload-email-logo-to-cloudinary.ts",
