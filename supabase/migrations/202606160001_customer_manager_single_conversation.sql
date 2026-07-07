@@ -251,8 +251,8 @@ with customer_manager_rooms as (
   select
     r.room_id,
     r.created_at,
-    min(m.user_id) filter (where role.role_name = 'customer') as customer_id,
-    min(m.user_id) filter (where role.role_name = 'manager') as manager_id
+    (array_agg(m.user_id order by m.user_id) filter (where role.role_name = 'customer'))[1] as customer_id,
+    (array_agg(m.user_id order by m.user_id) filter (where role.role_name = 'manager'))[1] as manager_id
   from public.chat_rooms r
   join public.chat_room_members m on m.room_id = r.room_id
   join public.users u on u.user_id = m.user_id
@@ -283,8 +283,8 @@ with customer_manager_rooms as (
   select
     r.room_id,
     r.created_at,
-    min(m.user_id) filter (where role.role_name = 'customer') as customer_id,
-    min(m.user_id) filter (where role.role_name = 'manager') as manager_id
+    (array_agg(m.user_id order by m.user_id) filter (where role.role_name = 'customer'))[1] as customer_id,
+    (array_agg(m.user_id order by m.user_id) filter (where role.role_name = 'manager'))[1] as manager_id
   from public.chat_rooms r
   join public.chat_room_members m on m.room_id = r.room_id
   join public.users u on u.user_id = m.user_id
@@ -315,8 +315,8 @@ with customer_manager_rooms as (
   select
     r.room_id,
     r.created_at,
-    min(m.user_id) filter (where role.role_name = 'customer') as customer_id,
-    min(m.user_id) filter (where role.role_name = 'manager') as manager_id
+    (array_agg(m.user_id order by m.user_id) filter (where role.role_name = 'customer'))[1] as customer_id,
+    (array_agg(m.user_id order by m.user_id) filter (where role.role_name = 'manager'))[1] as manager_id
   from public.chat_rooms r
   join public.chat_room_members m on m.room_id = r.room_id
   join public.users u on u.user_id = m.user_id
@@ -346,8 +346,8 @@ with customer_manager_rooms as (
   select
     r.room_id,
     r.created_at,
-    min(m.user_id) filter (where role.role_name = 'customer') as customer_id,
-    min(m.user_id) filter (where role.role_name = 'manager') as manager_id
+    (array_agg(m.user_id order by m.user_id) filter (where role.role_name = 'customer'))[1] as customer_id,
+    (array_agg(m.user_id order by m.user_id) filter (where role.role_name = 'manager'))[1] as manager_id
   from public.chat_rooms r
   left join public.chat_room_members m on m.room_id = r.room_id
   left join public.users u on u.user_id = m.user_id

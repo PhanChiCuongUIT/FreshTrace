@@ -42,6 +42,17 @@ if ([string]::IsNullOrWhiteSpace($ServiceRoleKey) -or $ServiceRoleKey -match "^(
 }
 
 Write-Host "Seeding FreshTrace demo users and demo workflows into production..."
+
+Write-Host "Refreshing production demo catalog to the current date..."
+npx.cmd deno run --allow-net scripts/refresh-demo-data.ts `
+  $supabaseUrl `
+  $ServiceRoleKey
+
+$exitCode = $LASTEXITCODE
+if ($exitCode -ne 0) {
+  throw "Production demo catalog refresh failed with exit code $exitCode."
+}
+
 npx.cmd deno run --allow-env --allow-net scripts/seed-demo-data.ts `
   $supabaseUrl `
   $anonKey `

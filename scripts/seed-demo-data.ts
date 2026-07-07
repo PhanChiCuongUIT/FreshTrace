@@ -93,10 +93,28 @@ const legacyDemoEmails = [
   "customer.minh@freshtrace.local",
 ];
 
+async function wait(ms: number) {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function listAuthUsersWithRetry() {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 6; attempt++) {
+    try {
+      const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
+      if (!listed.error) return listed.data.users;
+      lastError = listed.error;
+    } catch (error) {
+      lastError = error;
+    }
+    await wait(500 * attempt);
+  }
+  throw lastError;
+}
+
 async function ensureUser(definition: DemoUser): Promise<SignedInUser> {
-  const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  if (listed.error) throw listed.error;
-  let authUser = listed.data.users.find((item) => item.email === definition.email);
+  const listed = await listAuthUsersWithRetry();
+  let authUser = listed.find((item) => item.email === definition.email);
 
   if (!authUser) {
     const created = await admin.auth.admin.createUser({
@@ -551,11 +569,14 @@ async function ensureConversation(
   if (reaction.error) throw reaction.error;
 }
 
-const signedInUsers = await Promise.all(demoUsers.map(ensureUser));
+const signedInUsers: SignedInUser[] = [];
+for (const user of demoUsers) {
+  signedInUsers.push(await ensureUser(user));
+}
 for (const email of legacyDemoEmails) {
   if (retainedEmails.has(email)) continue;
-  const listed = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-  const legacy = listed.data.users.find((item) => item.email === email);
+  const listed = await listAuthUsersWithRetry();
+  const legacy = listed.find((item) => item.email === email);
   if (legacy) {
     await admin.auth.admin.deleteUser(legacy.id);
     await admin.from("users").delete().eq("auth_user_id", legacy.id);

@@ -168,7 +168,9 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy-production.ps1 -ResetLin
 For the FreshTrace defense/demo environment, seed demo users and workflows after
 the backend deploy succeeds. This creates the same representative demo accounts,
 orders, deliveries, reports, chat messages, coupons, and dashboard data used by
-the local demo setup.
+the local demo setup. The script also refreshes the fixed catalog batches,
+inventory, prices, and Fresh Rescue deals to the current date, then removes
+duplicate demo prices so the production defense data does not become stale.
 
 Get the service-role key from:
 
@@ -192,6 +194,9 @@ powershell -ExecutionPolicy Bypass -File scripts/seed-production-demo.ps1
 Never put the service-role key in Vercel or commit it to Git.
 
 Do not run this step for a real production launch.
+
+If you only need to refresh the demo catalog dates later, rerun the same command
+with the service-role key set. It is idempotent for the fixed demo records.
 
 Demo accounts created by the script:
 

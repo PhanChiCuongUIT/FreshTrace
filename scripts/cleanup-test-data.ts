@@ -159,6 +159,9 @@ async function deleteWhereEq(table: string, column: string, value: string, summa
   summary[table] = (summary[table] ?? 0) + 1;
   if (dryRun) return;
   const result = await supabase.from(table).delete().eq(column, value);
+  if (result.error && table === "supplier_approval_history" && /could not find the table/i.test(result.error.message)) {
+    return;
+  }
   if (result.error) throw new Error(`${table}: ${result.error.message}`);
 }
 
@@ -214,7 +217,13 @@ const [
   prices,
   rescueDeals,
 ] = await Promise.all([
-  selectAll<{ order_id: string; user_id: string; note: string | null; delivery_address: string | null }>("orders", "order_id,user_id,note,delivery_address"),
+  selectAll<{
+    order_id: string;
+    user_id: string;
+    note: string | null;
+    delivery_address: string | null;
+    applied_coupon_id: string | null;
+  }>("orders", "order_id,user_id,note,delivery_address,applied_coupon_id"),
   selectAll<{ cart_id: string; user_id: string }>("carts", "cart_id,user_id"),
   selectAll<{ cart_item_id: string; cart_id: string; note: string | null }>("cart_items", "cart_item_id,cart_id,note"),
   selectAll<{ delivery_id: string; order_id: string; employee_id: string | null; note: string | null; proof_image_url: string | null }>("deliveries", "delivery_id,order_id,employee_id,note,proof_image_url"),
@@ -453,6 +462,7 @@ await deleteIn("reports", "report_id", testReportIds, summary);
 await deleteIn("reviews", "review_id", testReviewIds, summary);
 await deleteIn("assistant_logs", "log_id", testAssistantLogIds, summary);
 await deleteIn("notifications", "notification_id", testNotificationIds, summary);
+await updateIn("orders", "order_id", testOrderIds, { applied_coupon_id: null });
 await deleteIn("coupons", "coupon_id", testCouponIds, summary);
 await deleteIn("payos_requests", "request_id", testPayosRequestIds, summary);
 await deleteIn("delivery_payment_collections", "collection_id", testCollectionIds, summary);

@@ -1,8 +1,9 @@
 $ErrorActionPreference = "Stop"
+$env:SUPABASE_TELEMETRY_DISABLED = "1"
 
 function Read-SupabaseStatus {
   $values = @{}
-  npx supabase status -o env | ForEach-Object {
+  npx.cmd supabase status -o env | ForEach-Object {
     if ($_ -match '^([A-Z_]+)="?(.*?)"?$') {
       $values[$matches[1]] = $matches[2]
     }
@@ -10,8 +11,27 @@ function Read-SupabaseStatus {
   return $values
 }
 
+function Invoke-LocalSqlFile([string]$Label, [string]$Path) {
+  Write-Host $Label
+  if (-not (Test-Path $Path)) {
+    throw "$Path was not found."
+  }
+  Get-Content -Raw $Path | docker exec -i supabase_db_freshtrace psql -v ON_ERROR_STOP=1 -U postgres -d postgres
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Label failed with exit code $LASTEXITCODE."
+  }
+}
+
+function Invoke-DenoSeedScript([string]$Label, [string]$ScriptPath, [string[]]$Arguments) {
+  Write-Host $Label
+  npx.cmd deno run --allow-env --allow-net $ScriptPath @Arguments
+  if ($LASTEXITCODE -ne 0) {
+    throw "$Label failed with exit code $LASTEXITCODE."
+  }
+}
+
 $status = Read-SupabaseStatus
-$required = @("API_URL", "PUBLISHABLE_KEY", "SECRET_KEY")
+$required = @("API_URL", "PUBLISHABLE_KEY", "SERVICE_ROLE_KEY")
 foreach ($name in $required) {
   if (-not $status.ContainsKey($name) -or [string]::IsNullOrWhiteSpace($status[$name])) {
     throw "Supabase is not running or $name was not returned by 'supabase status'."
@@ -33,11 +53,26 @@ if (-not $authReady) {
   throw "Supabase Auth did not become ready after 40 seconds."
 }
 
-npx deno run --allow-env --allow-net scripts/seed-demo-data.ts `
-  $status["API_URL"] `
-  $status["PUBLISHABLE_KEY"] `
-  $status["SECRET_KEY"]
+Invoke-DenoSeedScript "Preparing existing demo catalog for current date..." "scripts/refresh-demo-data.ts" @(
+  $status["API_URL"],
+  $status["SERVICE_ROLE_KEY"],
+  "--pre-seed"
+)
 
-if ($LASTEXITCODE -ne 0) {
-  throw "Demo data generation failed with exit code $LASTEXITCODE."
-}
+Invoke-LocalSqlFile "Ensuring base catalog seed exists..." "supabase/seed.sql"
+
+Invoke-DenoSeedScript "Refreshing deterministic demo catalog dates..." "scripts/refresh-demo-data.ts" @(
+  $status["API_URL"],
+  $status["SERVICE_ROLE_KEY"]
+)
+
+Invoke-DenoSeedScript "Seeding FreshTrace demo users and workflows..." "scripts/seed-demo-data.ts" @(
+  $status["API_URL"],
+  $status["PUBLISHABLE_KEY"],
+  $status["SERVICE_ROLE_KEY"]
+)
+
+Invoke-DenoSeedScript "Cleaning temporary test data..." "scripts/cleanup-test-data.ts" @(
+  $status["API_URL"],
+  $status["SERVICE_ROLE_KEY"]
+)

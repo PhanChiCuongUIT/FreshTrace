@@ -115,8 +115,10 @@ npm run frontend:dev
 Open `http://localhost:5173`.
 
 The reset adds a representative catalog with approved and pending suppliers, sixteen
-products, traceable batches, inventory, prices, and active Fresh Rescue deals.
-`npm run seed:demo` then creates operational data and these local accounts:
+products, traceable batches, inventory, prices, and Fresh Rescue deals.
+`npm run seed:demo` refreshes the fixed demo catalog to the current date, keeps
+the active Rescue deals inside the valid expiry window, removes duplicate demo
+prices, then creates operational data and these local accounts:
 
 | Role | Email | Password |
 |---|---|---|
@@ -133,7 +135,8 @@ two Managers, two Shippers, and two Customers.
 
 The demo command is for local development only. It also creates pending and
 completed COD orders, delivery tracking, a review, a report, chat rooms, messages,
-and notifications.
+and notifications. It is safe to run repeatedly when the local demo data becomes
+stale.
 
 ## Environment File Ownership
 
