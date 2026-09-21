@@ -5,6 +5,7 @@ import { QrScanner } from '../../components/QrScanner'
 import { date } from '../../lib/format'
 import { apiBaseUrl } from '../../lib/supabase'
 import { normalizeBatchScan } from '../../lib/qr'
+import { errorMessage, responseErrorMessage } from '../../lib/errorMessages'
 
 type Trace = { batch_code: string; harvest_date: string; expire_date: string; origin_location: string | null; status: string; products: { name: string; description: string | null; certificate: string | null }; suppliers: { name: string; address: string | null; certificate: string | null }; inventory: { quantity_available: number } | null }
 
@@ -19,11 +20,17 @@ export function TracePage() {
     const parsed = normalizeBatchScan(value)
     setCode(parsed.batchId || parsed.batchCode)
     setError('')
+    setData(null)
     const query = parsed.batchId ? `batchId=${encodeURIComponent(parsed.batchId)}` : `code=${encodeURIComponent(parsed.batchCode)}`
-    const response = await fetch(`${apiBaseUrl}/trace-batch?${query}`, { headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } })
-    const payload = await response.json()
-    if (!response.ok) return setError(payload.error ?? 'Traceability record not found')
-    setData(payload.data)
+    try {
+      const response = await fetch(`${apiBaseUrl}/trace-batch?${query}`, { headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY } })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) return setError(responseErrorMessage(payload, response.status))
+      if (!payload?.data) return setError('No batch was found. Please check the batch code or scan the QR code again.')
+      setData(payload.data)
+    } catch (error) {
+      setError(errorMessage(error))
+    }
   }, [batchId, code])
   useEffect(() => {
     if (batchId && loadedBatch.current !== batchId) {

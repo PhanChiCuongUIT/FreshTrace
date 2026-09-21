@@ -75,12 +75,11 @@ Do not commit `supabase-secrets.production.env`.
 
 ## 3. Deploy Backend
 
-For the FreshTrace defense/demo production environment, reset the linked
-Supabase Cloud database, apply all migrations, set Edge Function secrets, and
-deploy all Edge Functions:
+For an existing installation, apply pending migrations, set Edge Function secrets,
+and deploy functions without resetting data:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/deploy-production.ps1 -ResetLinkedDb
+powershell -ExecutionPolicy Bypass -File scripts/deploy-production.ps1
 ```
 
 This script performs:
@@ -98,8 +97,8 @@ The function list includes `account-status`, `admin-users`, `cancel-order`,
 `sync-payos-payment`, and `payos-webhook`. Redeploy these functions after changing
 account governance, PayOS, or payment reconciliation code.
 
-This is destructive for the linked production database. Use it only when the
-remote database can be wiped.
+`-ResetLinkedDb` is a separate destructive option. Never add it to routine
+deployment commands. Back up and explicitly approve any reset first.
 
 For a real production cutover later, where you do not want demo seed data, reset
 the schema without `supabase/seed.sql` and do not run the demo seeding step:
@@ -168,9 +167,9 @@ powershell -ExecutionPolicy Bypass -File scripts/deploy-production.ps1 -ResetLin
 For the FreshTrace defense/demo environment, seed demo users and workflows after
 the backend deploy succeeds. This creates the same representative demo accounts,
 orders, deliveries, reports, chat messages, coupons, and dashboard data used by
-the local demo setup. The script also refreshes the fixed catalog batches,
-inventory, prices, and Fresh Rescue deals to the current date, then removes
-duplicate demo prices so the production defense data does not become stale.
+the local demo setup. Full provisioning can reset demo passwords/profile states.
+Date refresh is separate: it updates only fixed demo batch dates and Rescue windows,
+preserving stock quantities, existing prices and transaction history.
 
 Get the service-role key from:
 
@@ -195,8 +194,21 @@ Never put the service-role key in Vercel or commit it to Git.
 
 Do not run this step for a real production launch.
 
-If you only need to refresh the demo catalog dates later, rerun the same command
-with the service-role key set. It is idempotent for the fixed demo records.
+For subsequent date refreshes, use the commands below instead of full provisioning:
+
+```powershell
+npm run data:refresh:production -- -DryRun
+npm run data:refresh:production
+```
+
+Inspect the dry-run target URL and affected IDs first. The service-role key must
+belong to that project. Each write is atomic, but the whole refresh is not a single
+transaction; failures stop the script, and rerunning completes remaining fixtures.
+Do not run on real merchandise, even if IDs match the original demo seed.
+
+Database changes are visible without a Git push or Vercel build. Push reviewed
+code changes to the connected Git branch to deploy frontend changes. Git/Vercel
+does not automatically run these database scripts. See [Maintenance](maintenance.md).
 
 Demo accounts created by the script:
 
@@ -357,8 +369,23 @@ https://freshtrace-app.vercel.app/payment/cancel
 
 ## 8. Production Smoke Test
 
+Start with the non-mutating demo diagnostic:
+
+```powershell
+npm run test:app:production
+```
+
+It reads the public settings in `.env.production`, checks four demo-role logins,
+page data queries, CORS and QR trace. Auth can create normal session/audit records,
+but this command does not modify business data. See
+[Error Handling and Verification](error-handling-and-verification.md) for limits.
+
+Frontend-only message changes need a new Vercel deployment, not a database reset
+or demo reseed. Verify the deployed commit before comparing error messages.
+
 After backend deploy, optional demo seed, Vercel deploy, Auth URL settings, SMTP,
-and payOS webhook are configured, run:
+and payOS reconciliation are configured, optionally run the mutation smoke test
+below on an approved demo/disposable environment:
 
 ```powershell
 $env:SUPABASE_SERVICE_ROLE_KEY="paste_service_role_key_here"

@@ -4,7 +4,7 @@
   "private": true,
   "description": "FreshTrace smart fresh-food marketplace",
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
     "backend:start": "powershell -ExecutionPolicy Bypass -File scripts/start-supabase.ps1",
@@ -15,6 +15,8 @@
     "backend:functions": "supabase functions serve --env-file supabase/.env.local",
     "backend:runtime-fix": "powershell -ExecutionPolicy Bypass -File scripts/fix-edge-runtime-jsr.ps1",
     "seed:demo": "powershell -ExecutionPolicy Bypass -File scripts/seed-demo.ps1",
+    "data:refresh": "powershell -ExecutionPolicy Bypass -File scripts/refresh-demo-data.ps1",
+    "data:refresh:production": "powershell -ExecutionPolicy Bypass -File scripts/refresh-demo-data.ps1 -Production",
     "cleanup:test-data:local": "powershell -ExecutionPolicy Bypass -File scripts/cleanup-test-data-local.ps1",
     "cleanup:test-data:production": "powershell -ExecutionPolicy Bypass -File scripts/cleanup-test-data-production.ps1",
     "seed:cloudinary": "deno run --allow-read --allow-net scripts/migrate-demo-assets-to-cloudinary.ts",
@@ -23,6 +25,10 @@
     "test:realtime": "powershell -ExecutionPolicy Bypass -File scripts/test-realtime.ps1",
     "test:email": "powershell -ExecutionPolicy Bypass -File scripts/test-email-confirmation.ps1",
     "test:backend": "powershell -ExecutionPolicy Bypass -File scripts/test-local-backend.ps1",
+    "test:seed-repeat": "powershell -ExecutionPolicy Bypass -File scripts/test-seed-repeat.ps1",
+    "test:messages": "deno test scripts/error-messages-test.ts",
+    "test:app:local": "deno run --allow-read --allow-env --allow-net scripts/check-app-readonly.ts frontend/.env.local http://localhost:5173/supabase http://localhost:5173",
+    "test:app:production": "deno run --allow-read --allow-env --allow-net scripts/check-app-readonly.ts .env.production",
     "test:catalog-crud": "powershell -ExecutionPolicy Bypass -File scripts/test-catalog-crud.ps1",
     "test:coupon-policy": "powershell -ExecutionPolicy Bypass -File scripts/test-coupon-reward-policy.ps1",
     "test:report-notifications": "powershell -ExecutionPolicy Bypass -File scripts/test-report-notifications.ps1",

@@ -208,7 +208,7 @@ export function ManagerCatalogPage() {
         imageUrl = await uploadImage(productImageFile, 'products')
       } catch (error) {
         setUploadingImage(false)
-        return feedback.error(String(error))
+        return feedback.error(error)
       }
       setUploadingImage(false)
     }
@@ -295,7 +295,7 @@ export function ManagerCatalogPage() {
     feedback.success('Image selected. Save the product to upload it.')
   }
   const generateQr = async (batchId: string) => {
-    try { await callFunction('generate-batch-qr', { batchId }); feedback.success('Batch QR is ready'); await invalidate() } catch (error) { feedback.error(String(error)) }
+    try { await callFunction('generate-batch-qr', { batchId }); feedback.success('Batch QR is ready'); await invalidate() } catch (error) { feedback.error(error) }
   }
   const toggleRecord = async (table: 'products' | 'batches' | 'fresh_rescue_deals', idColumn: string, id: string, values: Record<string, unknown>) => {
     if (!await feedback.confirm({ title: 'Apply this change?', description: 'This is a soft status update. Related order, inventory, report and chat history remains preserved by database constraints.', confirmLabel: 'Apply change' })) return

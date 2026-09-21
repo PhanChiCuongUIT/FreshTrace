@@ -1,4 +1,5 @@
 import { apiBaseUrl, supabase } from './supabase'
+import { errorMessage, responseErrorMessage } from './errorMessages'
 
 export async function callFunction<T>(name: string, body?: unknown, method = 'POST'): Promise<T> {
   const { data } = await supabase.auth.getSession()
@@ -13,10 +14,11 @@ export async function callFunction<T>(name: string, body?: unknown, method = 'PO
       },
       ...(body ? { body: JSON.stringify(body) } : {}),
     })
-  } catch {
-    throw new Error('Cannot reach FreshTrace backend. Check the production API URL and allowed origins.')
+  } catch (error) {
+    throw new Error(errorMessage(error), { cause: error })
   }
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(payload.error ?? 'Request failed')
+  const payload = await response.json().catch(() => null)
+  if (!response.ok) throw new Error(responseErrorMessage(payload, response.status))
+  if (payload === null) throw new Error('FreshTrace returned an unexpected response. Please try again later.')
   return payload as T
 }

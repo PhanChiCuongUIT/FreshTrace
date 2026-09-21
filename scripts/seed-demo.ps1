@@ -16,7 +16,7 @@ function Invoke-LocalSqlFile([string]$Label, [string]$Path) {
   if (-not (Test-Path $Path)) {
     throw "$Path was not found."
   }
-  Get-Content -Raw $Path | docker exec -i supabase_db_freshtrace psql -v ON_ERROR_STOP=1 -U postgres -d postgres
+  Get-Content -Raw $Path | docker exec -i supabase_db_freshtrace psql --single-transaction --file=- -v ON_ERROR_STOP=1 -U postgres -d postgres
   if ($LASTEXITCODE -ne 0) {
     throw "$Label failed with exit code $LASTEXITCODE."
   }
@@ -72,7 +72,4 @@ Invoke-DenoSeedScript "Seeding FreshTrace demo users and workflows..." "scripts/
   $status["SERVICE_ROLE_KEY"]
 )
 
-Invoke-DenoSeedScript "Cleaning temporary test data..." "scripts/cleanup-test-data.ts" @(
-  $status["API_URL"],
-  $status["SERVICE_ROLE_KEY"]
-)
+Write-Host "Demo provisioning complete. Test-data cleanup is a separate, explicit operation."

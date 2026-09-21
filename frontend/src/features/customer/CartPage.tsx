@@ -64,7 +64,7 @@ export function CartPage() {
     const result = quantity < 1
       ? await supabase.from('cart_items').delete().eq('cart_item_id', id).select('cart_item_id').single()
       : await supabase.from('cart_items').update({ quantity }).eq('cart_item_id', id).select('cart_item_id').single()
-    if (result.error) toast(result.error.message, 'error')
+    if (result.error) toast(result.error, 'error')
     else { await client.invalidateQueries({ queryKey: ['cart'] }); toast(quantity < 1 ? 'Product removed from cart' : 'Cart quantity updated') }
   }
   const updateNote = async (id: string, note: string) => {
@@ -72,7 +72,7 @@ export function CartPage() {
       .eq('cart_item_id', id)
       .select('cart_item_id')
       .single()
-    if (result.error) toast(result.error.message, 'error')
+    if (result.error) toast(result.error, 'error')
   }
   const checkout = useMutation({
     mutationFn: async () => {

@@ -99,7 +99,7 @@ export function ProfilePage() {
       .select('user_id')
       .single()
     setSaving(false)
-    if (result.error) feedback.error(result.error.message)
+    if (result.error) feedback.error(result.error)
     else { await refreshProfile(); feedback.success('Profile updated') }
   }
   const uploadAvatar = async (file?: File) => {
@@ -110,12 +110,12 @@ export function ProfilePage() {
       const url = await uploadImage(file, 'avatars')
       setAvatarUrl(url)
       feedback.info('Avatar uploaded. Click Save profile to apply the new avatar.')
-    } catch (error) { feedback.error(String(error)) } finally { setUploadingAvatar(false) }
+    } catch (error) { feedback.error(error) } finally { setUploadingAvatar(false) }
   }
   const sendPasswordReset = async () => {
     if (!profile?.email) return
     const result = await supabase.auth.resetPasswordForEmail(profile.email, { redirectTo: authRedirect('/reset-password') })
-    if (result.error) feedback.error(result.error.message)
+    if (result.error) feedback.error(result.error)
     else feedback.success('Password reset email sent. Check your email inbox.')
   }
 

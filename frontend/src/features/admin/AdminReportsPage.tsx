@@ -27,14 +27,14 @@ export function AdminReportsPage() {
     const approved = await feedback.confirm({ title: `${status === 'resolved' ? 'Resolve' : 'Reject'} report?`, description: 'This response is final and the reporter will be notified.', confirmLabel: status === 'resolved' ? 'Resolve report' : 'Reject report', danger: status === 'rejected' })
     if (!approved) return
     const result = await supabase.rpc('resolve_report', { p_report_id: reportId, p_status: status, p_response: responses[reportId] || null })
-    if (result.error) feedback.error(result.error.message)
+    if (result.error) feedback.error(result.error)
     else { client.invalidateQueries({ queryKey: ['admin-reports'] }); feedback.success('Report updated') }
   }
   const approve = async (supplierId: string, status: 'approved' | 'rejected') => {
     const approved = await feedback.confirm({ title: `${status === 'approved' ? 'Approve' : 'Reject'} supplier?`, description: status === 'approved' ? 'Approved suppliers can be attached to active products and batches.' : 'The supplier will remain unavailable to the public catalog.', confirmLabel: status === 'approved' ? 'Approve supplier' : 'Reject supplier', danger: status === 'rejected' })
     if (!approved) return
     const result = await supabase.rpc('approve_supplier', { p_supplier_id: supplierId, p_status: status, p_response: null })
-    if (result.error) feedback.error(result.error.message)
+    if (result.error) feedback.error(result.error)
     else { client.invalidateQueries({ queryKey: ['admin-suppliers'] }); feedback.success('Supplier status updated') }
   }
   useEffect(() => {

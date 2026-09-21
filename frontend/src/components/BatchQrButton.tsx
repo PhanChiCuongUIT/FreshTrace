@@ -16,7 +16,7 @@ export function BatchQrButton({ batchId, batchCode, label = 'Show batch QR' }: {
       const result = await callFunction<BatchQr>('render-batch-qr', { batchId, batchCode })
       setQr(result)
     } catch (error) {
-      toast(String(error), 'error')
+      toast(error, 'error')
     } finally {
       setLoading(false)
     }

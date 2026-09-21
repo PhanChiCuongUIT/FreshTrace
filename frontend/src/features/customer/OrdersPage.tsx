@@ -37,7 +37,7 @@ export function OrdersPage() {
       const result = await callFunction<{ couponCode: string | null }>('cancel-order', { orderId, reason: 'Cancelled by customer' })
       await client.invalidateQueries({ queryKey: ['orders'] })
       toast(result.couponCode ? `Order cancelled. Coupon ${result.couponCode} was issued.` : 'Order cancelled')
-    } catch (error) { toast(String(error), 'error') }
+    } catch (error) { toast(error, 'error') }
   }
   const payWithPayos = async (orderId: string) => {
     try {
@@ -46,7 +46,7 @@ export function OrdersPage() {
       if (!url) throw new Error('FreshTrace could not open the payOS checkout link.')
       window.location.assign(url)
     } catch (error) {
-      toast(error instanceof Error ? error.message : String(error), 'error')
+      toast(error, 'error')
     }
   }
   const syncPayosPayment = async (orderId: string) => {
@@ -56,7 +56,7 @@ export function OrdersPage() {
       if (result.status === 'paid') toast(result.synced ? 'Payment confirmed with payOS.' : 'This payment was already confirmed.')
       else toast(`payOS currently reports ${result.providerStatus ?? result.status}.`, 'error')
     } catch (error) {
-      toast(error instanceof Error ? error.message : String(error), 'error')
+      toast(error, 'error')
     }
   }
   const report = async (order: Order) => {
@@ -80,7 +80,7 @@ export function OrdersPage() {
       })
       .select('report_id')
       .single()
-    if (result.error) toast(result.error.message, 'error')
+    if (result.error) toast(result.error, 'error')
     else toast('Report submitted to Admin')
   }
   const review = async (order: Order, productId: string) => {
@@ -97,7 +97,7 @@ export function OrdersPage() {
       }, { onConflict: 'user_id,product_id,order_id' })
       .select('review_id')
       .single()
-    if (result.error) toast(result.error.message, 'error')
+    if (result.error) toast(result.error, 'error')
     else toast('Review saved')
   }
   if (orders.isLoading) return <LoadingState />

@@ -32,7 +32,7 @@ export function NotificationsPage() {
         .eq('notification_id', item.notification_id)
         .select('notification_id')
         .single()
-      if (result.error) return feedback.error(result.error.message)
+      if (result.error) return feedback.error(result.error)
     }
     client.invalidateQueries({ queryKey: ['notifications'] })
     client.invalidateQueries({ queryKey: ['notification-unread-count'] })
@@ -44,7 +44,7 @@ export function NotificationsPage() {
       .eq('user_id', profile.user_id)
       .eq('is_read', false)
       .select('notification_id')
-    if (result.error) return feedback.error(result.error.message)
+    if (result.error) return feedback.error(result.error)
     client.invalidateQueries({ queryKey: ['notifications'] })
     client.invalidateQueries({ queryKey: ['notification-unread-count'] })
     feedback.success(`${result.data.length} notification${result.data.length === 1 ? '' : 's'} marked as read`)

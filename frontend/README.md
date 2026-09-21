@@ -21,7 +21,7 @@ for the FreshTrace marketplace.
 ## Run
 
 ```powershell
-Copy-Item .env.example .env.local
+if (!(Test-Path .env.local)) { Copy-Item .env.example .env.local }
 npm install
 npm run dev
 ```
@@ -39,13 +39,15 @@ Only browser-safe configuration belongs in this frontend file:
 
 ```env
 VITE_SUPABASE_URL=http://127.0.0.1:55421
+VITE_USE_LOCAL_PROXY=true
 VITE_SUPABASE_ANON_KEY=your_local_publishable_key
 VITE_API_BASE_URL=http://127.0.0.1:55421/functions/v1
 VITE_QR_TRACE_BASE_URL=http://localhost:5173/trace
 ```
 
-For a physical phone on the same Wi-Fi, replace `127.0.0.1` and `localhost` with
-the computer LAN IPv4 address and run:
+With `VITE_USE_LOCAL_PROXY=true`, Vite forwards `/supabase` requests (including
+Realtime) to the local Docker gateway. Keep the backend URL above; open the
+frontend using the computer LAN IPv4 address on the phone and run:
 
 ```powershell
 npm run dev -- --host 0.0.0.0
@@ -53,6 +55,10 @@ npm run dev -- --host 0.0.0.0
 
 LAN HTTP does not provide browser camera permission. Use HTTPS or a deployed build
 for QR scanning and mobile capture flows.
+
+Update Auth redirect allowlists, backend `APP_URL`, payOS callbacks and QR URLs
+when your LAN address changes. The dev proxy is disabled in production builds.
+See [mobile testing](../docs/mobile-testing.md) and [maintenance](../docs/maintenance.md).
 
 ## Verify
 

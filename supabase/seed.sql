@@ -226,7 +226,7 @@ from (values
   ('30000000-0000-0000-0000-000000000015'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781263765/freshtrace/products/nam-roi-pomelo.jpg'),
   ('30000000-0000-0000-0000-000000000016'::uuid, 'https://res.cloudinary.com/dbltlcpkc/image/upload/v1781315706/freshtrace/products/grass-fed-beef-tenderloin.jpg')
 ) as images(product_id, image_url)
-where product.product_id = images.product_id;
+where product.product_id = images.product_id and product.image_url is null;
 
 insert into public.batches (
   batch_id, product_id, supplier_id, batch_code, harvest_date, expire_date,
@@ -394,7 +394,9 @@ insert into public.batches (
   )
 on conflict do nothing;
 
-insert into public.prices (product_id, batch_id, price, price_type) values
+insert into public.prices (product_id, batch_id, price, price_type)
+select seed.product_id::uuid, seed.batch_id::uuid, seed.price, seed.price_type::public.price_type
+from (values
   ('30000000-0000-0000-0000-000000000001', '40000000-0000-0000-0000-000000000001', 25000, 'normal'),
   ('30000000-0000-0000-0000-000000000002', '40000000-0000-0000-0000-000000000002', 32000, 'normal'),
   ('30000000-0000-0000-0000-000000000003', '40000000-0000-0000-0000-000000000003', 85000, 'normal'),
@@ -411,11 +413,25 @@ insert into public.prices (product_id, batch_id, price, price_type) values
   ,('30000000-0000-0000-0000-000000000014', '40000000-0000-0000-0000-000000000014', 16000, 'normal')
   ,('30000000-0000-0000-0000-000000000015', '40000000-0000-0000-0000-000000000015', 72000, 'normal')
   ,('30000000-0000-0000-0000-000000000016', '40000000-0000-0000-0000-000000000016', 285000, 'normal')
-on conflict do nothing;
+) as seed(product_id, batch_id, price, price_type)
+where not exists (
+  select 1 from public.prices existing
+  where existing.product_id = seed.product_id::uuid
+    and existing.batch_id = seed.batch_id::uuid
+    and existing.price_type = 'normal'
+);
 
 insert into public.fresh_rescue_deals (
-  deal_id, batch_id, title, description, original_price, rescue_price, end_at
-) values
+  deal_id, batch_id, title, description, original_price, rescue_price, start_at, end_at, status
+)
+select seed.deal_id::uuid, seed.batch_id::uuid, seed.title, seed.description,
+  seed.original_price, seed.rescue_price,
+  case when seed.deal_id like '%003' then now() - interval '3 days' else now() end,
+  seed.end_at,
+  case when seed.deal_id like '%002' then 'inactive'::public.rescue_status
+       when seed.deal_id like '%003' then 'expired'::public.rescue_status
+       else 'active'::public.rescue_status end
+from (values
   (
     '50000000-0000-0000-0000-000000000002',
     '40000000-0000-0000-0000-000000000004',
@@ -432,7 +448,7 @@ insert into public.fresh_rescue_deals (
     'Cook within the next two days.',
     38000,
     26000,
-    now() + interval '36 hours'
+    now() - interval '1 day'
   ),
   (
     '50000000-0000-0000-0000-000000000004',
@@ -461,23 +477,9 @@ insert into public.fresh_rescue_deals (
     9000,
     now() + interval '18 hours'
   )
-on conflict do nothing;
-
-select public.sync_batch_statuses();
-
-update public.fresh_rescue_deals
-set status = 'inactive'
-where deal_id = '50000000-0000-0000-0000-000000000002';
-
-update public.fresh_rescue_deals
-set status = 'expired',
-    start_at = now() - interval '3 days',
-    end_at = now() - interval '1 day'
-where deal_id = '50000000-0000-0000-0000-000000000003';
-
-update public.inventory
-set quantity_available = 0,
-    last_updated = now()
-where batch_id = '40000000-0000-0000-0000-000000000014';
+) as seed(deal_id, batch_id, title, description, original_price, rescue_price, end_at)
+where not exists (
+  select 1 from public.fresh_rescue_deals existing where existing.deal_id = seed.deal_id::uuid
+);
 
 select public.sync_batch_statuses();

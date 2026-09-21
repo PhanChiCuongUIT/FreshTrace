@@ -37,20 +37,20 @@ export function ManagerOrdersPage() {
   const confirmOrder = async (orderId: string) => {
     if (!await feedback.confirm({ title: 'Confirm order?', description: 'Inventory remains reserved and the order moves into fulfillment.', confirmLabel: 'Confirm order' })) return
     const result = await supabase.rpc('confirm_order', { p_order_id: orderId })
-    if (result.error) feedback.error(result.error.message)
+    if (result.error) feedback.error(result.error)
     else { client.invalidateQueries({ queryKey: ['manager-orders'] }); feedback.success('Order confirmed') }
   }
   const prepareOrder = async (orderId: string) => {
     if (!await feedback.confirm({ title: 'Start preparation?', description: 'Packing teams will prepare supplier groups for consolidated delivery.', confirmLabel: 'Start preparation' })) return
     const result = await supabase.rpc('mark_order_preparing', { p_order_id: orderId })
-    if (result.error) feedback.error(result.error.message)
+    if (result.error) feedback.error(result.error)
     else { client.invalidateQueries({ queryKey: ['manager-orders'] }); feedback.success('Order preparation started') }
   }
   const assign = async (orderId: string, nextEmployeeId: string) => {
     if (!nextEmployeeId) return
     const employee = employees.data?.find(item => item.user_id === nextEmployeeId)
     if (!await feedback.confirm({ title: 'Assign delivery?', description: `${employee?.name ?? 'This employee'} will receive the order, batch checklist and chat rooms.`, confirmLabel: 'Assign shipper' })) return
-    try { await callFunction('assign-delivery', { orderId, employeeId: nextEmployeeId }); client.invalidateQueries({ queryKey: ['manager-orders'] }); feedback.success('Delivery assigned') } catch (error) { feedback.error(error instanceof Error ? error.message : String(error)) }
+    try { await callFunction('assign-delivery', { orderId, employeeId: nextEmployeeId }); client.invalidateQueries({ queryKey: ['manager-orders'] }); feedback.success('Delivery assigned') } catch (error) { feedback.error(error) }
   }
   if (orders.isLoading || employees.isLoading) return <LoadingState />
   if (orders.error || employees.error) return <ErrorState error={orders.error ?? employees.error} />

@@ -23,3 +23,4 @@ if ($Lite) {
 } else {
   npx supabase start --exclude "edge-runtime,imgproxy,logflare,mailpit,vector,supavisor"
 }
+if ($LASTEXITCODE -ne 0) { throw "Supabase startup failed with exit code $LASTEXITCODE. Inspect the Docker/port error above; do not reset the database." }

@@ -104,7 +104,7 @@ export function ChatPage() {
         )
         if (existing) return setRoomId(existing.room_id)
         const result = await supabase.rpc('create_chat_room', { p_type: contact.room_type, p_other_user_id: contact.user_id, p_order_id: contact.room_type === 'customer_manager' ? shareOrder : contact.order_id, p_product_id: null })
-        if (result.error) return feedback.error(result.error.message)
+        if (result.error) return feedback.error(result.error)
         setRoomId(result.data as string)
         client.invalidateQueries({ queryKey: ['chat-rooms'] })
         return
@@ -115,7 +115,7 @@ export function ChatPage() {
         const existing = rooms.data?.find(room => room.room_type === 'customer_manager' && room.peer_user_id === contact.user_id)
         if (existing) return setRoomId(existing.room_id)
         const result = await supabase.rpc('create_chat_room', { p_type: contact.room_type, p_other_user_id: contact.user_id, p_order_id: null, p_product_id: shareProduct })
-        if (result.error) return feedback.error(result.error.message)
+        if (result.error) return feedback.error(result.error)
         setRoomId(result.data as string)
         client.invalidateQueries({ queryKey: ['chat-rooms'] })
       }
@@ -126,7 +126,7 @@ export function ChatPage() {
     const contact = visibleContacts.find(item => contactKey(item) === selectedContactKey)
     if (!contact) return feedback.error('Select a valid contact')
     const result = await supabase.rpc('create_chat_room', { p_type: contact.room_type, p_other_user_id: contact.user_id, p_order_id: contact.order_id, p_product_id: null })
-    if (result.error) return feedback.error(result.error.message)
+    if (result.error) return feedback.error(result.error)
     setRoomId(result.data as string)
     client.invalidateQueries({ queryKey: ['chat-rooms'] })
   }
@@ -153,7 +153,7 @@ export function ChatPage() {
       if (shareProduct || shareOrder) navigate(roomId ? `/chat/${roomId}` : '/chat', { replace: true })
       client.invalidateQueries({ queryKey: ['chat-messages', roomId] })
     } catch (error) {
-      feedback.error(String(error))
+      feedback.error(error)
     } finally {
       setSending(false)
     }
@@ -163,7 +163,7 @@ export function ChatPage() {
     const result = existing?.reaction === reaction
       ? await supabase.from('chat_message_reactions').delete().eq('reaction_id', existing.reaction_id).select('reaction_id').single()
       : await supabase.from('chat_message_reactions').upsert({ message_id: item.message_id, user_id: profile!.user_id, reaction }, { onConflict: 'message_id,user_id' }).select('reaction_id').single()
-    if (result.error) feedback.error(result.error.message)
+    if (result.error) feedback.error(result.error)
     else { setReactionFor(''); client.invalidateQueries({ queryKey: ['chat-messages', roomId] }) }
   }
   if (rooms.isLoading) return <LoadingState />

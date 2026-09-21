@@ -5,6 +5,7 @@ import { Badge, PageHeader } from '../../components/Page'
 import { EmptyState, ErrorState, LoadingState } from '../../components/AsyncState'
 import { QrScanner } from '../../components/QrScanner'
 import { callFunction } from '../../lib/api'
+import { errorMessage } from '../../lib/errorMessages'
 import { supabase } from '../../lib/supabase'
 import { normalizeBatchScan } from '../../lib/qr'
 import { useAuth } from '../auth/auth-context'
@@ -30,7 +31,7 @@ function text(value: unknown) {
 }
 
 function messageOf(error: unknown) {
-  return error instanceof Error ? error.message : error && typeof error === 'object' && 'message' in error ? String(error.message) : String(error)
+  return errorMessage(error)
 }
 
 export function ShipperDashboard() {

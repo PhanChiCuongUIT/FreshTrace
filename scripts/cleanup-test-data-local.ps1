@@ -1,3 +1,4 @@
+param([switch]$DryRun)
 $ErrorActionPreference = "Stop"
 
 function Read-SupabaseStatus {
@@ -18,9 +19,11 @@ foreach ($name in $required) {
   }
 }
 
+$options = @()
+if ($DryRun) { $options += "--dry-run" }
 npx.cmd deno run --allow-net scripts/cleanup-test-data.ts `
   $status["API_URL"] `
-  $status["SECRET_KEY"]
+  $status["SECRET_KEY"] @options
 
 if ($LASTEXITCODE -ne 0) {
   throw "Local test-data cleanup failed with exit code $LASTEXITCODE."

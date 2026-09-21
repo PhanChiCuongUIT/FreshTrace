@@ -8,7 +8,7 @@ extra_search_path = ["public", "extensions"]
 max_rows = 1000
 
 [db]
-port = 55432
+port = 54322
 shadow_port = 55430
 major_version = 15
 
@@ -23,7 +23,7 @@ port = 55424
 
 [auth]
 enabled = true
-site_url = "http://192.168.1.11:5173"
+site_url = "http://localhost:5173"
 additional_redirect_urls = [
   "http://localhost:5173/login",
   "http://localhost:5173/auth/callback",
@@ -32,9 +32,9 @@ additional_redirect_urls = [
   "http://127.0.0.1:5173/auth/confirm",
   "http://127.0.0.1:5173/login",
   "http://127.0.0.1:5173/reset-password",
-  "http://192.168.1.11:5173/auth/confirm",
-  "http://192.168.1.11:5173/login",
-  "http://192.168.1.11:5173/reset-password",
+  "http://192.168.1.12:5173/auth/confirm",
+  "http://192.168.1.12:5173/login",
+  "http://192.168.1.12:5173/reset-password",
 ]
 enable_signup = true
 

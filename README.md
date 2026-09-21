@@ -38,7 +38,7 @@ The responsive strategy is role-specific:
 
 ## Prerequisites
 
-- Node.js 20 or newer
+- Node.js 22.12+ or 24 LTS (Vite also supports Node 20.19+)
 - npm
 - Docker Desktop
 - A Supabase cloud project for deployment and full Edge Function testing
@@ -49,22 +49,25 @@ The responsive strategy is role-specific:
 ```powershell
 npm install
 npm run frontend:install
-Copy-Item supabase\.env.local.example supabase\.env.local
-Copy-Item frontend\.env.example frontend\.env.local
+if (!(Test-Path supabase\.env.local)) { Copy-Item supabase\.env.local.example supabase\.env.local }
+if (!(Test-Path frontend\.env.local)) { Copy-Item frontend\.env.example frontend\.env.local }
 ```
 
 ## Run Locally
 
-Start Docker Desktop, then start and reset the local backend:
+Start Docker Desktop. For an existing installation, preserve the database:
 
 ```powershell
 npm run backend:start
-npm run backend:reset
-npm run seed:demo
-npx supabase status
+npm run data:refresh -- -DryRun
+npm run data:refresh
 ```
 
-Copy the displayed `PUBLISHABLE_KEY` into `VITE_SUPABASE_ANON_KEY` in
+For a new installation only, apply migrations with `npx supabase migration up --local`
+and run `npm run seed:demo` to provision demo accounts/workflows. `backend:reset`
+deletes local application data; it is not a restart command.
+
+Use `npx supabase status` and copy `PUBLISHABLE_KEY` into `VITE_SUPABASE_ANON_KEY` in
 `frontend/.env.local`. Never put `SECRET_KEY` or `SERVICE_ROLE_KEY` in the frontend.
 
 Check configuration without printing secret values:
@@ -114,11 +117,13 @@ npm run frontend:dev
 
 Open `http://localhost:5173`.
 
-The reset adds a representative catalog with approved and pending suppliers, sixteen
+The base seed adds a representative catalog with approved and pending suppliers, sixteen
 products, traceable batches, inventory, prices, and Fresh Rescue deals.
-`npm run seed:demo` refreshes the fixed demo catalog to the current date, keeps
-the active Rescue deals inside the valid expiry window, removes duplicate demo
-prices, then creates operational data and these local accounts:
+`npm run seed:demo` refreshes fixed demo catalog dates and provisions operational
+data and these local accounts. It can restore demo profile states/passwords; do
+not use it just to renew dates. `npm run data:refresh` preserves users, stock,
+prices, orders, payments, coupons and chat history. Neither command automatically
+deletes old prices or test data.
 
 | Role | Email | Password |
 |---|---|---|
@@ -135,8 +140,8 @@ two Managers, two Shippers, and two Customers.
 
 The demo command is for local development only. It also creates pending and
 completed COD orders, delivery tracking, a review, a report, chat rooms, messages,
-and notifications. It is safe to run repeatedly when the local demo data becomes
-stale.
+and notifications. For stale demo dates use `npm run data:refresh` instead.
+Never renew expiry dates of real stock: receive a new batch through Manager Catalog.
 
 ## Environment File Ownership
 
@@ -155,6 +160,7 @@ The frontend needs only these browser-safe values:
 
 ```env
 VITE_SUPABASE_URL=http://127.0.0.1:55421
+VITE_USE_LOCAL_PROXY=true
 VITE_SUPABASE_ANON_KEY=your_local_publishable_key
 VITE_API_BASE_URL=http://127.0.0.1:55421/functions/v1
 VITE_QR_TRACE_BASE_URL=http://localhost:5173/trace
@@ -245,6 +251,7 @@ or deploy the functions to Supabase cloud.
 ## Verify
 
 ```powershell
+npm run test:messages
 npm run backend:lint
 npm run test:types
 npm run test:backend
@@ -252,7 +259,14 @@ npm run test:realtime
 npm run test:email
 npm run frontend:lint
 npm run frontend:build
+npm run test:app:local
 ```
+
+For an already deployed demo, `npm run test:app:production` checks role login and
+page API queries without creating business records. It reads `.env.production`.
+See [Error Handling and Verification](docs/error-handling-and-verification.md)
+for prerequisites, tested scope and remaining manual checks. Passing API tests
+does not replace browser/mobile testing or real payment/email verification.
 
 `npm run test:backend` reads local credentials from `supabase status` without
 printing them and runs both the smoke and integration suites.
@@ -316,9 +330,10 @@ The phone and computer must use the same Wi-Fi network. Find the computer IPv4
 address with `ipconfig`, then replace `192.168.1.20` below with that address:
 
 ```env
-# frontend/.env.local
-VITE_SUPABASE_URL=http://192.168.1.20:55421
-VITE_API_BASE_URL=http://192.168.1.20:55421/functions/v1
+# frontend/.env.local (the dev proxy forwards API and Realtime to Docker)
+VITE_USE_LOCAL_PROXY=true
+VITE_SUPABASE_URL=http://127.0.0.1:55421
+VITE_API_BASE_URL=http://127.0.0.1:55421/functions/v1
 VITE_QR_TRACE_BASE_URL=http://192.168.1.20:5173/trace
 VITE_SITE_URL=http://192.168.1.20:5173
 VITE_AUTH_REDIRECT_URL=http://192.168.1.20:5173/login
@@ -337,8 +352,8 @@ Run the frontend on all network interfaces:
 npm run frontend:dev:lan
 ```
 
-Open `http://192.168.1.20:5173` on the phone. Allow inbound TCP ports `5173` and
-`55421` in Windows Firewall if the page or API cannot be reached. Confirmation and
+Open `http://192.168.1.20:5173` on the phone. With the dev proxy, only frontend port
+`5173` needs LAN access; do not expose the database port. Confirmation and
 password reset links are sent to the real recipient inbox through SMTP, so use an
 email account you can open on the phone.
 
@@ -358,6 +373,8 @@ also require a publicly reachable HTTPS backend.
 - [Required Secrets](docs/required-secrets.md)
 - [Frontend Guide](frontend/README.md)
 - [Production Deployment](docs/production-deploy.md)
+- [Restart and Data Maintenance](docs/maintenance.md)
+- [Error Handling and Verification](docs/error-handling-and-verification.md)
 - [Presentation and Demo Guide](docs/presentation-demo-guide.md)
 
 ## Security

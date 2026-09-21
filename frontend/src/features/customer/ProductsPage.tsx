@@ -37,13 +37,13 @@ export function ProductsPage({ rescueOnly = false }: { rescueOnly?: boolean }) {
   const add = async (product: CatalogProduct) => {
     if (role !== 'customer') return toast('Only Customer accounts can add products to a cart', 'error')
     const cart = await supabase.from('carts').select('cart_id').eq('user_id', profile!.user_id).single()
-    if (cart.error) return toast(cart.error.message, 'error')
+    if (cart.error) return toast(cart.error, 'error')
     const existing = await supabase.from('cart_items').select('cart_item_id,quantity').eq('cart_id', cart.data.cart_id).eq('batch_id', product.batch_id).maybeSingle()
-    if (existing.error) return toast(existing.error.message, 'error')
+    if (existing.error) return toast(existing.error, 'error')
     const result = existing.data
       ? await supabase.from('cart_items').update({ quantity: existing.data.quantity + 1 }).eq('cart_item_id', existing.data.cart_item_id).select('cart_item_id').single()
       : await supabase.from('cart_items').insert({ cart_id: cart.data.cart_id, product_id: product.product_id, batch_id: product.batch_id, quantity: 1 }).select('cart_item_id').single()
-    if (result.error) return toast(result.error.message, 'error')
+    if (result.error) return toast(result.error, 'error')
     await client.invalidateQueries({ queryKey: ['cart'] })
     toast('Added to cart')
   }

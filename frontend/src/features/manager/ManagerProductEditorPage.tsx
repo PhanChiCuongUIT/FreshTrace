@@ -54,7 +54,7 @@ export function ManagerProductEditorPage() {
         imageUrl = await uploadImage(pendingImage, 'products')
       } catch (error) {
         setUploadingImage(false)
-        return feedback.error(String(error))
+        return feedback.error(error)
       }
       setUploadingImage(false)
     }

@@ -23,7 +23,7 @@ export function AdminUsersPage() {
     return result.data as unknown as User[]
   }})
   const create = async () => {
-    try { await callFunction('admin-users', { action: 'create', ...form }); setForm({ name: '', email: '', password: '', role: 'employee' }); client.invalidateQueries({ queryKey: ['admin-users'] }); feedback.success('User account created') } catch (error) { feedback.error(String(error)) }
+    try { await callFunction('admin-users', { action: 'create', ...form }); setForm({ name: '', email: '', password: '', role: 'employee' }); client.invalidateQueries({ queryKey: ['admin-users'] }); feedback.success('User account created') } catch (error) { feedback.error(error) }
   }
   const update = async (userId: string, values: { role?: Role; status?: User['status'] }) => {
     const user = users.data?.find(item => item.user_id === userId)
@@ -46,7 +46,7 @@ export function AdminUsersPage() {
       if (!entered) return
       reason = entered
     } else if (!await feedback.confirm({ title: 'Apply user governance change?', description: `Warning: ${change}. Active orders or deliveries will block unsafe changes.`, confirmLabel: 'Apply change', danger: Boolean(values.role === 'admin') })) return
-    try { await callFunction('admin-users', { action: 'update', userId, ...values, reason }); client.invalidateQueries({ queryKey: ['admin-users'] }); feedback.success(values.status === 'inactive' || values.status === 'banned' ? 'User status updated and email notification sent' : 'User account updated') } catch (error) { feedback.error(String(error)) }
+    try { await callFunction('admin-users', { action: 'update', userId, ...values, reason }); client.invalidateQueries({ queryKey: ['admin-users'] }); feedback.success(values.status === 'inactive' || values.status === 'banned' ? 'User status updated and email notification sent' : 'User account updated') } catch (error) { feedback.error(error) }
   }
   const deleteUser = async (user: User) => {
     const approved = await feedback.confirm({
@@ -61,7 +61,7 @@ export function AdminUsersPage() {
       client.invalidateQueries({ queryKey: ['admin-users'] })
       feedback.success('Banned user deleted')
     } catch (error) {
-      feedback.error(String(error))
+      feedback.error(error)
     }
   }
   if (users.isLoading) return <LoadingState />

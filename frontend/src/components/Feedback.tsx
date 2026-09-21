@@ -1,13 +1,14 @@
 import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from 'react'
 import { CheckCircle2, CircleAlert, Info, TriangleAlert, X } from 'lucide-react'
+import { errorMessage } from '../lib/errorMessages'
 
 type ToastTone = 'success' | 'error' | 'info'
 type ConfirmOptions = { title: string; description?: string; message?: string; confirmLabel?: string; danger?: boolean; tone?: 'default' | 'danger' }
 type PromptOptions = ConfirmOptions & { placeholder?: string; required?: boolean }
 type FeedbackValue = {
-  toast: (message: string, tone?: ToastTone) => void
+  toast: (message: unknown, tone?: ToastTone) => void
   success: (message: string) => void
-  error: (message: string) => void
+  error: (message: unknown) => void
   info: (message: string) => void
   confirm: (options: ConfirmOptions) => Promise<boolean>
   prompt: (options: PromptOptions) => Promise<string | null>
@@ -23,7 +24,8 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const resolver = useRef<((value: boolean) => void) | null>(null)
   const promptResolver = useRef<((value: string | null) => void) | null>(null)
 
-  const toast = useCallback((message: string, tone: ToastTone = 'success') => {
+  const toast = useCallback((value: unknown, tone: ToastTone = 'success') => {
+    const message = tone === 'error' ? errorMessage(value) : String(value)
     const id = Date.now() + Math.random()
     setToasts(current => [...current, { id, message, tone }])
     window.setTimeout(() => setToasts(current => current.filter(item => item.id !== id)), 3500)
@@ -54,7 +56,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   }
 
   const success = useCallback((message: string) => toast(message, 'success'), [toast])
-  const error = useCallback((message: string) => toast(message, 'error'), [toast])
+  const error = useCallback((message: unknown) => toast(message, 'error'), [toast])
   const info = useCallback((message: string) => toast(message, 'info'), [toast])
   return <FeedbackContext.Provider value={{ toast, success, error, info, confirm, prompt }}>
     {children}

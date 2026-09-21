@@ -1,7 +1,8 @@
 param(
   [switch]$Lite,
   [switch]$SkipInstall,
-  [switch]$SkipReset
+  [switch]$SkipReset,
+  [switch]$Reset
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,6 +19,7 @@ if ($LASTEXITCODE -ne 0) {
 
 if (-not $SkipInstall) {
   npm install
+  if ($LASTEXITCODE -ne 0) { throw "Dependency installation failed." }
 }
 
 if ($Lite) {
@@ -25,9 +27,11 @@ if ($Lite) {
 } else {
   npm run backend:start
 }
+if ($LASTEXITCODE -ne 0) { throw "Backend startup failed." }
 
-if (-not $SkipReset) {
+if ($Reset -and -not $SkipReset) {
   npm run backend:reset
+  if ($LASTEXITCODE -ne 0) { throw "Requested database reset failed." }
 }
 
 Write-Host ""

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
+import { errorMessage } from '../../lib/errorMessages'
 
 type VerifyType = 'signup' | 'invite' | 'magiclink' | 'recovery' | 'email_change' | 'email'
 
@@ -21,7 +22,7 @@ export function AuthConfirmPage() {
   const [error, setError] = useState('')
   const missingTokenError = params.get('token_hash')
     ? ''
-    : 'This confirmation link is missing its verification token.'
+    : 'This email link is incomplete. Please open the full link from your email or request a new one.'
 
   useEffect(() => {
     const tokenHash = params.get('token_hash')
@@ -35,12 +36,12 @@ export function AuthConfirmPage() {
 
     supabase.auth.verifyOtp({ token_hash: tokenHash, type }).then(result => {
       if (result.error) {
-        setError(result.error.message)
+        setError(errorMessage(result.error))
         return
       }
       setMessage(type === 'recovery' ? 'Password recovery confirmed. Redirecting...' : 'Email confirmed. Redirecting...')
       window.setTimeout(() => navigate(next, { replace: true }), 700)
-    })
+    }).catch(error => setError(errorMessage(error)))
   }, [navigate, params])
 
   const visibleError = missingTokenError || error

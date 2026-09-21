@@ -37,16 +37,16 @@ export function AssistantPage() {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState<Answer | null>(null)
   const [loading, setLoading] = useState(false)
-  const ask = async () => { setLoading(true); try { setAnswer(await callFunction<Answer>('fresh-assistant', { question })) } catch (error) { feedback.error(String(error)) } finally { setLoading(false) } }
+  const ask = async () => { setLoading(true); try { setAnswer(await callFunction<Answer>('fresh-assistant', { question })) } catch (error) { feedback.error(error) } finally { setLoading(false) } }
   const addToCart = async (item: Recommendation) => {
     const cart = await supabase.from('carts').select('cart_id').eq('user_id', profile!.user_id).single()
-    if (cart.error) return feedback.error(cart.error.message)
+    if (cart.error) return feedback.error(cart.error)
     const existing = await supabase.from('cart_items').select('cart_item_id,quantity').eq('cart_id', cart.data.cart_id).eq('batch_id', item.batchId).maybeSingle()
-    if (existing.error) return feedback.error(existing.error.message)
+    if (existing.error) return feedback.error(existing.error)
     const result = existing.data
       ? await supabase.from('cart_items').update({ quantity: existing.data.quantity + 1 }).eq('cart_item_id', existing.data.cart_item_id).select('cart_item_id').single()
       : await supabase.from('cart_items').insert({ cart_id: cart.data.cart_id, product_id: item.productId, batch_id: item.batchId, quantity: 1 }).select('cart_item_id').single()
-    if (result.error) feedback.error(result.error.message)
+    if (result.error) feedback.error(result.error)
     else {
       client.invalidateQueries({ queryKey: ['cart'] })
       feedback.success(`${item.name} added to cart`)

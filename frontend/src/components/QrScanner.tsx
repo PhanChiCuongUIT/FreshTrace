@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { Camera, ImageUp, X } from 'lucide-react'
 import jsQR from 'jsqr'
+import { errorMessage } from '../lib/errorMessages'
 
 type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => { detect: (source: ImageBitmap) => Promise<Array<{ rawValue: string }>> }
 
@@ -50,7 +51,7 @@ export function QrScanner({ onResult, label = 'Scan QR', showImageButton = false
         if (!cameraId) throw firstReason
         await scanner.start(cameraId, { fps: 10, qrbox }, onDecoded, () => undefined)
       }
-    }).catch(reason => setError(reason instanceof Error ? reason.message : String(reason)))
+    }).catch(reason => setError(errorMessage(reason)))
     return () => { cancelled = true; stop?.().catch(() => undefined) }
   }, [elementId, liveSupported, open])
 
@@ -161,7 +162,7 @@ export function QrScanner({ onResult, label = 'Scan QR', showImageButton = false
       setOpen(false)
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason)
-      setError(message.includes('No MultiFormat Readers') ? 'No QR code was detected in this file. Please choose a clearer, uncropped QR image from your device.' : message)
+      setError(message.includes('No MultiFormat Readers') ? 'No QR code was detected in this file. Please choose a clearer, uncropped QR image from your device.' : errorMessage(message))
     } finally {
       setFileScanning(false)
     }

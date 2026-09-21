@@ -59,7 +59,7 @@ export function ReportsPage() {
       description: description.trim(),
     }).select('report_id').single()
     setSubmitting(false)
-    if (result.error) return feedback.error(result.error.message)
+    if (result.error) return feedback.error(result.error)
     setDescription('')
     setOrderId('')
     setReportedUserId('')

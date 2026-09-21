@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { callFunction } from '../../lib/api'
+import { errorMessage } from '../../lib/errorMessages'
 
 export function ResetPasswordPage() {
   const navigate = useNavigate()
@@ -19,23 +20,21 @@ export function ResetPasswordPage() {
     if (password !== confirmPassword) return setError('Passwords do not match.')
 
     setBusy(true)
-    const user = await supabase.auth.getUser()
-    const email = user.data.user?.email
-    if (email) {
-      try {
-        await callFunction<{ allowed: boolean }>('account-status', { email })
-      } catch (statusError) {
-        await supabase.auth.signOut()
-        setBusy(false)
-        return setError(statusError instanceof Error ? statusError.message : String(statusError))
-      }
+    try {
+      const user = await supabase.auth.getUser()
+      if (user.error) throw user.error
+      const email = user.data.user?.email
+      if (!email) throw new Error('Please open a new password reset link from your email before continuing.')
+      await callFunction<{ allowed: boolean }>('account-status', { email })
+      const result = await supabase.auth.updateUser({ password })
+      if (result.error) throw result.error
+      setMessage('Password updated. Redirecting to FreshTrace...')
+      window.setTimeout(() => navigate('/', { replace: true }), 900)
+    } catch (error) {
+      setError(errorMessage(error))
+    } finally {
+      setBusy(false)
     }
-    const result = await supabase.auth.updateUser({ password })
-    setBusy(false)
-    if (result.error) return setError(result.error.message)
-
-    setMessage('Password updated. Redirecting to FreshTrace...')
-    window.setTimeout(() => navigate('/', { replace: true }), 900)
   }
 
   return <div className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top_left,#d8fbe4,transparent_45%),#f7f8f3] p-4">

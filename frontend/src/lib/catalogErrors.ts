@@ -1,8 +1,11 @@
+import { errorMessage } from './errorMessages'
+
 export type CatalogError = { message: string; code?: string | null }
 
 export function catalogErrorMessage(error: CatalogError) {
   const message = error.message.toLowerCase()
-  if (message.includes('cannot delete') || error.code === '23503') return 'This record cannot be deleted because products, batches, inventory, prices, orders, reports, or audit history still reference it. Deactivate or lock the record instead.'
+  if (message.includes('cannot delete') || message.includes('still referenced from table')) return 'This record cannot be deleted because other records still use it. Keep it for reference, or deactivate it if that option is available.'
+  if (error.code === '23503') return 'A related record is missing or is still in use. Refresh the page and check your selections before trying again.'
   if (error.code === '23505' || message.includes('duplicate key')) return 'A catalog record with the same unique value already exists. Check the name, batch code, or active period.'
   if (message.includes('supplier cannot be changed after batches exist')) return 'This product already has traceable batches, so its supplier cannot be changed. Create a new product for a different supplier.'
   if (message.includes('supplier must be approved')) return 'Select an approved supplier before saving this product or batch.'
@@ -13,5 +16,5 @@ export function catalogErrorMessage(error: CatalogError) {
   if (message.includes('reserved stock')) return 'Available quantity cannot be lower than stock already reserved for customer orders.'
   if (message.includes('row-level security') || message.includes('forbidden')) return 'Your account is not allowed to perform this catalog operation.'
   if (error.code === '23514' || message.includes('check constraint')) return 'One or more values violate a catalog rule. Check quantities, prices, dates, and statuses.'
-  return error.message
+  return errorMessage(error)
 }

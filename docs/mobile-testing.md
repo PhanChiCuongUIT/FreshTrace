@@ -19,11 +19,11 @@ Run:
 ipconfig
 ```
 
-Find the active Wi-Fi adapter and copy its IPv4 address. On the current machine it
-was:
+Find the active Wi-Fi adapter and copy its IPv4 address. The address below is an
+example; replace it with your current address:
 
 ```text
-192.168.1.11
+192.168.1.20
 ```
 
 Do not use `127.0.0.1`. On a phone, `127.0.0.1` means the phone itself.
@@ -33,15 +33,21 @@ Do not use `127.0.0.1`. On a phone, `127.0.0.1` means the phone itself.
 Update `frontend/.env.local`:
 
 ```env
-VITE_SUPABASE_URL=http://192.168.1.11:55421
+VITE_USE_LOCAL_PROXY=true
+VITE_SUPABASE_URL=http://127.0.0.1:55421
 VITE_SUPABASE_ANON_KEY=YOUR_LOCAL_PUBLISHABLE_KEY
-VITE_API_BASE_URL=http://192.168.1.11:55421/functions/v1
-VITE_QR_TRACE_BASE_URL=http://192.168.1.11:5173/trace
+VITE_API_BASE_URL=http://127.0.0.1:55421/functions/v1
+VITE_QR_TRACE_BASE_URL=http://192.168.1.20:5173/trace
 ```
 
 Also update the LAN entries in `supabase/config.toml` under
 `auth.additional_redirect_urls`, then restart Supabase. This allows confirmation
 and password-recovery links opened on the phone to return to the LAN frontend.
+
+The dev proxy forwards browser API and WebSocket requests through Vite to Docker.
+The browser uses its own frontend origin for auth redirects in proxy mode. Backend
+`APP_URL`, `QR_TRACE_BASE_URL` and payOS return/cancel URLs must still use a reachable
+frontend LAN address. Do not enable local proxy mode when developing against Cloud.
 
 FreshTrace local development sends confirmation and password-reset email through
 real SMTP. For Gmail, configure a Gmail App Password in `supabase/.env.local`, then
@@ -58,7 +64,7 @@ npx supabase status
 Update `ALLOWED_ORIGINS` in `supabase/.env.local`:
 
 ```env
-ALLOWED_ORIGINS=http://localhost:5173,http://192.168.1.11:5173
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173,http://192.168.1.20:5173
 ```
 
 Restart `backend:functions` after changing this file.
@@ -68,11 +74,11 @@ Restart `backend:functions` after changing this file.
 Run PowerShell as Administrator:
 
 ```powershell
-New-NetFirewallRule -DisplayName "FreshTrace Frontend" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5173
-New-NetFirewallRule -DisplayName "FreshTrace Supabase" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 55421
+New-NetFirewallRule -DisplayName "FreshTrace Frontend" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 5173 -Profile Private -RemoteAddress LocalSubnet
 ```
 
-Only add these rules on a trusted private network.
+Only add this rule on a trusted private network. The proxy avoids exposing the
+Supabase gateway directly to the phone. Never expose PostgreSQL to the public internet.
 
 ### 6. Start FreshTrace
 
@@ -80,8 +86,8 @@ Terminal 1:
 
 ```powershell
 npm run backend:start
-npm run backend:reset
-npm run seed:demo
+npm run data:refresh -- -DryRun
+npm run data:refresh
 ```
 
 Terminal 2:
@@ -101,7 +107,7 @@ npm run frontend:dev:lan
 Restart Vite after every `.env.local` change, then open:
 
 ```text
-http://192.168.1.11:5173
+http://192.168.1.20:5173
 ```
 
 Customer login:
@@ -122,29 +128,29 @@ FreshTrace!123
 
 Work through these checks in order:
 
-1. On the computer, open `http://192.168.1.11:5173`.
-2. On the phone, open `http://192.168.1.11:55421/auth/v1/health`. A JSON health
-   response proves the phone can reach Supabase.
-3. If step 1 works but step 2 fails, allow inbound port `55421` in Windows Firewall
-   and confirm Docker Desktop is running.
+1. On the computer, open `http://192.168.1.20:5173` (use your own current IP).
+2. On the phone, open the same URL. Inspect failed `/supabase/` requests in browser
+   devtools if login fails. Auth health may require the public API key, so a bare
+   health URL returning 401 does not mean the service is down.
+3. Confirm Docker Desktop, `backend:functions` and the Vite proxy are running.
+   Restart Vite after enabling `VITE_USE_LOCAL_PROXY=true`.
 4. If both fail on the phone, set the Windows network profile to **Private**, keep
    both devices on the same Wi-Fi, and disable VPN, mobile data, Private Relay, or
    router AP/client isolation.
-5. Confirm the frontend variables do not contain `127.0.0.1` or `localhost`, then
-   stop and restart `npm run frontend:dev:lan`.
-6. After `npm run backend:reset`, restart the stack if login reports a JWT timing
-   error:
+5. With proxy mode enabled, localhost backend URLs are correct. Without it, the
+   phone must use a reachable LAN backend URL. Do not mix cloud keys with local URLs.
+6. Restart the stack if needed; do not reset it:
 
 ```powershell
 npm run backend:stop
 npm run backend:start
-npm run seed:demo
 ```
 
 7. Run `npm run test:backend`. Do not continue to phone testing until it passes.
 
 The computer IP may change after reconnecting to Wi-Fi. Re-run `ipconfig` and update
-both environment files whenever that happens.
+frontend links, backend callbacks and the Auth redirect allowlist. The local API
+proxy itself does not need a new IP. See [Maintenance](maintenance.md).
 
 ## Why Camera Does Not Work on LAN HTTP
 
