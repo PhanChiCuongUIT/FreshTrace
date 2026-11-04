@@ -67,6 +67,11 @@ For a new installation only, apply migrations with `npx supabase migration up --
 and run `npm run seed:demo` to provision demo accounts/workflows. `backend:reset`
 deletes local application data; it is not a restart command.
 
+For an existing demo, `npm run seed` refreshes the fixed catalog fixtures and
+enables date maintenance until the end of the current month. It preserves existing
+users/passwords, stock and order history. Use only for demo data, never real food
+expiry dates. Docker must be running for the scheduled job to execute.
+
 Use `npx supabase status` and copy `PUBLISHABLE_KEY` into `VITE_SUPABASE_ANON_KEY` in
 `frontend/.env.local`. Never put `SECRET_KEY` or `SERVICE_ROLE_KEY` in the frontend.
 
@@ -373,9 +378,7 @@ also require a publicly reachable HTTPS backend.
 - [Required Secrets](docs/required-secrets.md)
 - [Frontend Guide](frontend/README.md)
 - [Production Deployment](docs/production-deploy.md)
-- [Restart and Data Maintenance](docs/maintenance.md)
 - [Error Handling and Verification](docs/error-handling-and-verification.md)
-- [Presentation and Demo Guide](docs/presentation-demo-guide.md)
 
 ## Security
 

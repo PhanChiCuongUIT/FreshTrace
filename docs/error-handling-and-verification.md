@@ -63,31 +63,22 @@ normal Auth sessions and audit logs. Successful queries do not prove every row,
 calculation or workflow is correct.
 
 For local CRUD integration tests, run `npm run test:backend` against disposable
-data or take a snapshot first. See [Maintenance](maintenance.md): tests modify
+data or take a snapshot first. These tests modify
 shared demo stock, and deleting fixtures alone does not reverse all stock changes.
 Do not point this mutation suite at a live production database.
 
-## Verification on 2026-09-21
+## Verification Scope
 
-- 18 error-message tests passed; frontend lint/build, Deno type checks and database
-  lint passed.
-- Local backend suite passed, including workflow integration, Manager Catalog CRUD,
-  non-Manager CRUD and coupon lifecycle checks.
-- Local and production read-only diagnostics passed for Customer, Manager,
-  Employee/Shipper and Admin. Queries included catalog/inventory, orders, cart,
-  coupons, deliveries with batch checks, monitoring, finance, reports and notifications.
-- Local test fixtures were removed and the test-only stock delta was restored from
-  the pre-test snapshot. Production business records were not changed.
-- No full browser click-through, physical-phone camera, real payment, SMTP inbox
-  delivery or Cloudinary upload test was performed in this error-message pass.
-  Payment tests exercise database workflow rules, not a real bank transfer.
+The automated suites cover error-message translation, database workflow rules,
+Manager Catalog CRUD, non-Manager CRUD and coupon lifecycle. Read-only diagnostics
+cover login and selected page API queries for all four roles. They do not replace
+browser click-through, physical-phone camera, SMTP inbox, image upload or real
+bank-transfer tests. Re-test the relevant flows after each deployment; a passing
+suite is not a guarantee that all possible CRUD or UI errors have been eliminated.
 
-This is scoped verification, not a guarantee that all possible CRUD or UI errors
-have been eliminated. Re-test production after deploying the new frontend.
+## Deploying Message Changes
 
-## Deploying These Message Changes
-
-These frontend message fixes do not require a database reset, migration or reseed.
+Frontend-only message changes do not require a database reset, migration or reseed.
 Review and commit the intended source/docs changes, push to the Vercel-connected
 branch, and confirm that deployment uses the new commit. Existing unrelated backend
 changes must be reviewed separately. Until redeployment, the hosted frontend may

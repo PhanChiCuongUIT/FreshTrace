@@ -58,7 +58,7 @@ for QR scanning and mobile capture flows.
 
 Update Auth redirect allowlists, backend `APP_URL`, payOS callbacks and QR URLs
 when your LAN address changes. The dev proxy is disabled in production builds.
-See [mobile testing](../docs/mobile-testing.md) and [maintenance](../docs/maintenance.md).
+See [mobile testing](../docs/mobile-testing.md) and [local setup](../README.md#run-locally).
 
 ## Verify
 

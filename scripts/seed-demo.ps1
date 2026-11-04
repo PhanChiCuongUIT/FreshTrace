@@ -1,3 +1,4 @@
+param([switch]$RefreshOnly)
 $ErrorActionPreference = "Stop"
 $env:SUPABASE_TELEMETRY_DISABLED = "1"
 
@@ -65,6 +66,12 @@ Invoke-DenoSeedScript "Refreshing deterministic demo catalog dates..." "scripts/
   $status["API_URL"],
   $status["SERVICE_ROLE_KEY"]
 )
+
+if ($RefreshOnly) {
+  & "$PSScriptRoot/maintain-demo-month.ps1" -ConfirmDemoData
+  Write-Host "Existing demo catalog refreshed for this month. Users, passwords and order history were preserved. For a new database, run npm run seed:demo to provision accounts/workflows."
+  exit 0
+}
 
 Invoke-DenoSeedScript "Seeding FreshTrace demo users and workflows..." "scripts/seed-demo-data.ts" @(
   $status["API_URL"],

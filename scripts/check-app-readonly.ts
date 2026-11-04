@@ -76,6 +76,10 @@ for (const [role, email] of [["customer", "customer@freshtrace.local"], ["manage
       const counts: Record<string, number> = {};
       if (role === "customer") {
         counts.catalog = await rows("catalog", client.rpc("search_products", { p_query: null, p_category_id: null, p_certificate: null, p_max_price: null, p_rescue_only: false, p_limit: 50, p_offset: 0 }));
+        counts.rescue = await rows("rescue", client.rpc("search_products", { p_query: null, p_category_id: null, p_certificate: null, p_max_price: null, p_rescue_only: true, p_limit: 50, p_offset: 0 }));
+        if (counts.catalog < 2 || counts.rescue === 0) {
+          console.warn(`WARN demo availability: ${counts.catalog} sellable products, ${counts.rescue} Rescue products. Check batch expiry, stock, prices and supplier approval; a successful query does not mean demo data is fresh.`);
+        }
         counts.orders = await rows("orders", client.from("orders").select("order_id,order_items(product_name,batches(batch_code)),payments(method,status),deliveries(status),order_tracking(status)").eq("user_id", id));
         counts.cart = await rows("cart", client.from("carts").select("cart_id,cart_items(quantity)").eq("user_id", id));
         counts.coupons = await rows("coupons", client.from("coupons").select("coupon_id,remaining_amount,expires_at").eq("user_id", id));

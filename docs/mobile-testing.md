@@ -150,7 +150,7 @@ npm run backend:start
 
 The computer IP may change after reconnecting to Wi-Fi. Re-run `ipconfig` and update
 frontend links, backend callbacks and the Auth redirect allowlist. The local API
-proxy itself does not need a new IP. See [Maintenance](maintenance.md).
+proxy itself does not need a new IP. See [local setup](../README.md#run-locally).
 
 ## Why Camera Does Not Work on LAN HTTP
 

@@ -91,7 +91,7 @@ reports all depend on the stock trail remaining auditable.
 Only on a disposable local database, `npm run backend:reset` followed by
 `npm run seed:demo` deletes existing data and recreates the following fixtures.
 For routine date renewal use `npm run data:refresh`; for selected test cleanup use
-the explicit cleanup command after reviewing `-DryRun`. See [Maintenance](maintenance.md).
+the explicit cleanup command after reviewing `-DryRun`. See [local setup](../README.md#run-locally).
 
 - 7 role-based accounts: 1 Admin, 2 Managers, 2 Employees, and 2 Customers.
 - 16 products, 16 batches, 16 inventory rows, 16 prices, and 5 suppliers,

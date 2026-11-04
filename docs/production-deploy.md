@@ -208,7 +208,7 @@ Do not run on real merchandise, even if IDs match the original demo seed.
 
 Database changes are visible without a Git push or Vercel build. Push reviewed
 code changes to the connected Git branch to deploy frontend changes. Git/Vercel
-does not automatically run these database scripts. See [Maintenance](maintenance.md).
+does not automatically run these database scripts.
 
 Demo accounts created by the script:
 

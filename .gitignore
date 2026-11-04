@@ -24,6 +24,9 @@ supabase/.branches/
 *.log
 .tmp-functions-*.log
 
+# Personal operating notes and presentation rehearsal (not project deliverables)
+/.local-notes/
+
 # Editors and OS
 .idea/
 .vscode/
